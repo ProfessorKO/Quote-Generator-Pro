@@ -14,6 +14,17 @@ export function useSpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  const onResultRef = useRef(onResult);
+  const onEndRef = useRef(onEnd);
+
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
+
+  useEffect(() => {
+    onEndRef.current = onEnd;
+  }, [onEnd]);
+
   useEffect(() => {
     if (!SpeechRecognition) {
       console.warn("Speech recognition not supported in this browser.");
@@ -37,8 +48,8 @@ export function useSpeechRecognition({
         }
       }
 
-      if (onResult) {
-        onResult(finalTranscript || interimTranscript, !!finalTranscript);
+      if (onResultRef.current) {
+        onResultRef.current(finalTranscript || interimTranscript, !!finalTranscript);
       }
     };
 
@@ -49,17 +60,21 @@ export function useSpeechRecognition({
 
     recognition.onend = () => {
       setIsListening(false);
-      if (onEnd) onEnd();
+      if (onEndRef.current) onEndRef.current();
     };
 
     recognitionRef.current = recognition;
 
     return () => {
       if (recognitionRef.current) {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
     };
-  }, [onResult, onEnd]);
+  }, []);
 
   const toggleListening = useCallback(() => {
     if (!recognitionRef.current) {
