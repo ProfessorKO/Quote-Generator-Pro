@@ -22,6 +22,7 @@ You can:
   - Variable means priced per unit (e.g. unit "hour" or "metre", quantity adjustable, unitPrice is the per-unit rate)
   - Fixed means a flat charge (set unit to "each", quantity to 1, unitPrice to the flat amount)
 - Add a new line item (generate a short id, a sensible label, unit, unitPrice, quantity default 1, and a voiceKey)
+- Add a discount or deduction that reduces the subtotal: represent it as a line item with a NEGATIVE unitPrice (e.g. a $50 discount = unitPrice -50, quantity 1, unit "each", label "Discount"). A percentage discount must be converted to a negative dollar amount based on the current subtotal.
 - Remove a line item
 - Toggle GST on/off (settings.includeGst) — GST rate is always 0.10
 - Turn the call-out fee on/off (settings.hasCallOut) and set its amount (settings.callOutFee)
@@ -82,9 +83,17 @@ Output this exact JSON structure:
     return;
   }
 
+  // Non-negative only (quantities, fees, percentages).
   const clampNumber = (value: unknown, fallback: number): number => {
     const n = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(n) || n < 0) return fallback;
+    return n;
+  };
+
+  // Allow negatives (e.g. discounts use a negative unitPrice) but reject invalid numbers.
+  const sanitizeSigned = (value: unknown, fallback: number): number => {
+    const n = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(n)) return fallback;
     return n;
   };
 
@@ -94,7 +103,7 @@ Output this exact JSON structure:
       ...item,
       id: item.id || `item-${index + 1}`,
       quantity: clampNumber(item.quantity, 1),
-      unitPrice: clampNumber(item.unitPrice, 0),
+      unitPrice: sanitizeSigned(item.unitPrice, 0),
       unit: item.unit ?? "each",
       voiceKey: item.voiceKey ?? item.label ?? `item ${index + 1}`,
       description: item.description ?? null,
