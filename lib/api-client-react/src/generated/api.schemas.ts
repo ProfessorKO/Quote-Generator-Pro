@@ -63,6 +63,22 @@ export interface ParsedQuote {
   settings: QuoteSettings;
 }
 
+export interface VoiceCommandInput {
+  /** The spoken command transcript to apply to the quote */
+  command: string;
+  lineItems: QuoteLineItem[];
+  settings: QuoteSettings;
+}
+
+export interface VoiceCommandResult {
+  lineItems: QuoteLineItem[];
+  settings: QuoteSettings;
+  /** Short human-readable summary of what changed */
+  message: string;
+  /** Whether the command was understood and applied */
+  understood: boolean;
+}
+
 export interface OpenaiConversation {
   id: number;
   title: string;

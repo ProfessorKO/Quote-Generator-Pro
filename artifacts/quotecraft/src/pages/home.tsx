@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, Loader2, Save, Trash2, Plus, FileText, CheckCircle2 } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/use-speech";
-import { useParseQuoteDescription, useCreateTemplate, getListTemplatesQueryKey, useGetTemplate, QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
+import { useParseQuoteDescription, useApplyVoiceCommand, useCreateTemplate, getListTemplatesQueryKey, useGetTemplate, QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -46,6 +46,7 @@ export default function Home() {
 
   const queryClient = useQueryClient();
   const parseQuote = useParseQuoteDescription();
+  const applyVoiceCommand = useApplyVoiceCommand();
   const createTemplate = useCreateTemplate();
   const { data: loadedTemplate, isSuccess: templateLoaded } = useGetTemplate(Number(templateId), {
     query: { enabled: !!templateId, queryKey: ["template", templateId] }
@@ -69,57 +70,50 @@ export default function Home() {
     }
   });
 
+  const handleVoiceCommand = (transcript: string) => {
+    const command = transcript.trim();
+    if (!command) return;
+
+    // "Save template" is a UI action, handle it locally without an AI call.
+    if (command.toLowerCase().includes("save template")) {
+      setTemplateName(businessName || "New Template");
+      setSaveDialogOpen(true);
+      toast("Opening save template");
+      return;
+    }
+
+    // Prevent overlapping commands from racing and overwriting newer state.
+    if (applyVoiceCommand.isPending) {
+      toast("Still applying the previous command, please wait...");
+      return;
+    }
+
+    const loadingToast = toast.loading(`Applying: "${command}"`);
+    applyVoiceCommand.mutate(
+      { data: { command, lineItems, settings } },
+      {
+        onSuccess: (data) => {
+          toast.dismiss(loadingToast);
+          if (data.understood) {
+            setLineItems(data.lineItems);
+            setSettings(data.settings);
+            toast.success(data.message);
+          } else {
+            toast.error(data.message || "Couldn't understand that command");
+          }
+        },
+        onError: () => {
+          toast.dismiss(loadingToast);
+          toast.error("Failed to apply command. Please try again.");
+        },
+      }
+    );
+  };
+
   const { isListening: formListening, toggleListening: toggleFormListening } = useSpeechRecognition({
     onResult: (transcript, isFinal) => {
       if (!isFinal) return;
-      
-      const lowerTranscript = transcript.toLowerCase();
-      
-      // Match save command
-      if (lowerTranscript.includes("save template")) {
-        setTemplateName(businessName || "New Template");
-        setSaveDialogOpen(true);
-        toast("Command recognized: Save template");
-        return;
-      }
-
-      // Match GST toggles
-      if (lowerTranscript.includes("add gst") || lowerTranscript.includes("include gst")) {
-        setSettings(s => ({ ...s, includeGst: true }));
-        toast("Command recognized: Add GST");
-        return;
-      }
-      if (lowerTranscript.includes("remove gst") || lowerTranscript.includes("no gst")) {
-        setSettings(s => ({ ...s, includeGst: false }));
-        toast("Command recognized: Remove GST");
-        return;
-      }
-
-      // Match line item quantities by voice key
-      let matched = false;
-      const updatedItems = lineItems.map(item => {
-        if (item.voiceKey && lowerTranscript.includes(item.voiceKey.toLowerCase())) {
-          // Extract number after voice key
-          const words = lowerTranscript.split(" ");
-          const keyIndex = words.findIndex(w => item.voiceKey.toLowerCase().includes(w));
-          if (keyIndex !== -1) {
-            // look ahead for numbers
-            for (let i = keyIndex + 1; i < words.length && i < keyIndex + 3; i++) {
-              const num = parseFloat(words[i]);
-              if (!isNaN(num)) {
-                matched = true;
-                toast(`Command recognized: Set ${item.label} to ${num}`);
-                return { ...item, quantity: num };
-              }
-            }
-          }
-        }
-        return item;
-      });
-
-      if (matched) {
-        setLineItems(updatedItems);
-      }
+      handleVoiceCommand(transcript);
     }
   });
 

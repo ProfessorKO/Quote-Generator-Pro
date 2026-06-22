@@ -23,3 +23,5 @@ export * from './quoteLineItem';
 export * from './quoteSettings';
 export * from './quoteTemplate';
 export * from './quoteTemplateInput';
+export * from './voiceCommandInput';
+export * from './voiceCommandResult';

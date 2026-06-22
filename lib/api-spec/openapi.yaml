@@ -154,6 +154,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ParsedQuote"
 
+  /apply-voice-command:
+    post:
+      operationId: applyVoiceCommand
+      tags: [parse]
+      summary: Apply a spoken command to an existing quote structure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoiceCommandInput"
+      responses:
+        "200":
+          description: Updated quote structure with a summary of the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceCommandResult"
+
   /openai/conversations:
     get:
       operationId: listOpenaiConversations
@@ -430,6 +449,44 @@ components:
       required:
         - lineItems
         - settings
+
+    VoiceCommandInput:
+      type: object
+      properties:
+        command:
+          type: string
+          description: The spoken command transcript to apply to the quote
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+      required:
+        - command
+        - lineItems
+        - settings
+
+    VoiceCommandResult:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        message:
+          type: string
+          description: Short human-readable summary of what changed
+        understood:
+          type: boolean
+          description: Whether the command was understood and applied
+      required:
+        - lineItems
+        - settings
+        - message
+        - understood
 
     OpenaiConversation:
       type: object

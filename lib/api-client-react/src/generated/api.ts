@@ -33,7 +33,9 @@ import type {
   ParseQuoteInput,
   ParsedQuote,
   QuoteTemplate,
-  QuoteTemplateInput
+  QuoteTemplateInput,
+  VoiceCommandInput,
+  VoiceCommandResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -562,6 +564,77 @@ export const useParseQuoteDescription = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getParseQuoteDescriptionMutationOptions(options));
+    }
+
+export const getApplyVoiceCommandUrl = () => {
+
+
+
+
+  return `/api/apply-voice-command`
+}
+
+/**
+ * @summary Apply a spoken command to an existing quote structure
+ */
+export const applyVoiceCommand = async (voiceCommandInput: VoiceCommandInput, options?: RequestInit): Promise<VoiceCommandResult> => {
+
+  return customFetch<VoiceCommandResult>(getApplyVoiceCommandUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      voiceCommandInput,)
+  }
+);}
+
+
+
+
+export const getApplyVoiceCommandMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext> => {
+
+const mutationKey = ['applyVoiceCommand'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyVoiceCommand>>, {data: BodyType<VoiceCommandInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyVoiceCommand(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyVoiceCommandMutationResult = NonNullable<Awaited<ReturnType<typeof applyVoiceCommand>>>
+    export type ApplyVoiceCommandMutationBody = BodyType<VoiceCommandInput>
+    export type ApplyVoiceCommandMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Apply a spoken command to an existing quote structure
+ */
+export const useApplyVoiceCommand = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyVoiceCommand>>,
+        TError,
+        {data: BodyType<VoiceCommandInput>},
+        TContext
+      > => {
+      return useMutation(getApplyVoiceCommandMutationOptions(options));
     }
 
 export const getListOpenaiConversationsUrl = () => {

@@ -199,6 +199,53 @@ export const ParseQuoteDescriptionResponse = zod.object({
 
 
 /**
+ * @summary Apply a spoken command to an existing quote structure
+ */
+export const ApplyVoiceCommandBody = zod.object({
+  "command": zod.string().describe('The spoken command transcript to apply to the quote'),
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+})
+})
+
+export const ApplyVoiceCommandResponse = zod.object({
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+}),
+  "message": zod.string().describe('Short human-readable summary of what changed'),
+  "understood": zod.boolean().describe('Whether the command was understood and applied')
+})
+
+
+/**
  * @summary List all conversations
  */
 export const ListOpenaiConversationsResponseItem = zod.object({
