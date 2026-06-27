@@ -1,0 +1,49 @@
+Bug #1: Voice cue for quote revision
+
+"Fix bug: Add voice confirmation when quote is recalculated. Use speech synthesis to say 'Quote updated' and show a toast notification. Debounce the speech so it doesn't interrupt if multiple changes happen quickly."
+
+Bug #2: Input box leading zero issue
+
+"Fix bug: Fix numeric input boxes: when user clicks/taps into a number field, automatically select all text so they can type over it. If they leave the field empty, restore the old value."
+
+Bug #3: Voice-to-speech conversion blocking
+
+"Fix bug: Disable the 'Generate Quote Form' button while voice is being processed. Show a loading state with 'Processing voice...' text. Re-enable only after voice recognition completes or fails."
+
+Bug #4: Duplicate microphone icons
+
+"Fix bug: Remove duplicate microphone icons. Keep only ONE floating microphone that handles ALL voice interactions – both initial quote generation and subsequent adjustments."
+
+Bug #5: Screen not locked during voice processing
+
+"Fix bug: Lock the entire screen during voice processing. Show a full-screen overlay with 'Processing voice...' spinner. Disable all buttons, inputs, and scrolling. Auto-unlock after processing completes or errors. Add a 30-second timeout to prevent infinite lock."
+
+Bug #6: Duplicate template names allowed
+
+"Fix bug: When saving templates, prevent duplicate template names. Before saving, check if a template with the same name already exists for the current user. If duplicate found, stop the save operation and show error message: 'A template named [Template Name] already exists. Please choose a different name.' Prompt the user to rename the template. Auto-select the name field for quick renaming. Add voice feedback: 'A template with that name already exists. Please say a different name.'"
+
+---
+
+✨ Enhancement Prompts
+
+Enhancement #1: Slow initial loading speed
+
+"Add enhancement: Improve initial loading speed. Add code splitting with React.lazy() and Suspense. Add a loading spinner that appears immediately. Implement skeleton loading screens. Optimize bundle size. Add preconnect to external APIs. Show loading icon while content loads."
+
+Enhancement #2: PDF export with branded form
+
+"Add enhancement: PDF export with branded form. When user requests PDF, show a frontend form with: logo upload (optional, top-left corner), contact name (mandatory), mobile (pre-populated from registration), email (pre-populated from registration), ABN (optional, show header on PDF), ACN (optional, show header on PDF). Generate PDF with all quote details, GST, and footer message: 'Thank you for your business! We are looking forward to hearing from you!'"
+
+Enhancement #3: Single floating voice icon (always visible)
+
+"Add enhancement: Replace all microphone icons with ONE floating microphone that is always visible on the side of the screen. It should follow the user as they scroll (sticky/fixed position). Tooltip on hover: 'Speak to make changes to quantity, unit price or even the quote structure'. Handle ALL voice commands through this single mic."
+
+Enhancement #4: Performance optimization
+
+"Add enhancement: Optimize performance. Add skeleton loading screens that appear immediately. Show progress bars. Optimize voice recognition for speed (continuous=false, interimResults=true). Render line items progressively as they're parsed. Cache templates in localStorage. Add debouncing to calculations (300ms delay). Track performance metrics and log slow steps."
+
+Enhancement #5: User registration with mobile & email verification
+
+"Add enhancement: User registration with mobile and email verification. Registration requires: full name, email, mobile number (Australian format), password (min 8 chars with number and letter). Send 6-digit OTP to both email and mobile. Both must be verified before access. Use SMS service (Twilio) for mobile OTP. Add rate limiting (3 attempts per 15 minutes). OTP expires in 10 minutes. Auto-submit when 6 digits entered. Show clear error messages for duplicates, invalid format, expired codes. Hash passwords with bcrypt. Add session management with JWT. After verification, show welcome screen and redirect to dashboard with saved templates."
+
+---
