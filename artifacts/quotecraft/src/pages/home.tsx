@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NumericInput } from "@/components/numeric-input";
+import { VoiceOverlay } from "@/components/voice-overlay";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
@@ -46,32 +47,78 @@ export default function Home() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
-  const [screenLock, setScreenLock] = useState(false);
-  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const LISTEN_WINDOW_SECONDS = 30;
+
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [listeningMic, setListeningMic] = useState<"describe" | "edit" | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(LISTEN_WINDOW_SECONDS);
+
+  const listenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const processTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalsRef = useRef("");
+  const cancelledRef = useRef(false);
+
+  const overlayOpen = listeningMic !== null || processing;
+
+  const clearListenTimers = () => {
+    if (listenTimerRef.current) { clearTimeout(listenTimerRef.current); listenTimerRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  };
 
   useEffect(() => {
-    document.body.style.overflow = screenLock ? "hidden" : "";
+    document.body.style.overflow = overlayOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [screenLock]);
+  }, [overlayOpen]);
 
   useEffect(() => () => {
-    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    clearListenTimers();
+    if (processTimerRef.current) clearTimeout(processTimerRef.current);
     if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
   }, []);
 
-  const startLock = () => {
-    setScreenLock(true);
-    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-    lockTimerRef.current = setTimeout(() => {
-      setScreenLock(false);
+  // Open the centred "Listening…" overlay and start a 30s capture window with a
+  // live countdown. Both mics use this so the screen is fully blocked while the
+  // mic captures speech (Bug #3/#5 + dual-mic prototype).
+  const beginListening = (mic: "describe" | "edit", onExpire: () => void) => {
+    finalsRef.current = "";
+    cancelledRef.current = false;
+    setLiveTranscript("");
+    setSecondsLeft(LISTEN_WINDOW_SECONDS);
+    setListeningMic(mic);
+    clearListenTimers();
+    countdownRef.current = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    listenTimerRef.current = setTimeout(onExpire, LISTEN_WINDOW_SECONDS * 1000);
+  };
+
+  // Accumulate finalized chunks; show finals + the current interim live.
+  const updateTranscript = (transcript: string, isFinal: boolean) => {
+    if (isFinal) {
+      finalsRef.current = (finalsRef.current ? finalsRef.current + " " : "") + transcript;
+      setLiveTranscript(finalsRef.current);
+    } else {
+      setLiveTranscript((finalsRef.current ? finalsRef.current + " " : "") + transcript);
+    }
+  };
+
+  // AI processing step (generation / voice-command apply) shows a spinner
+  // overlay with its own 30s safety timeout so it can never hang.
+  const startProcessing = () => {
+    setProcessing(true);
+    if (processTimerRef.current) clearTimeout(processTimerRef.current);
+    processTimerRef.current = setTimeout(() => {
+      setProcessing(false);
       toast.error("Voice processing timed out. Please try again.");
     }, 30000);
   };
 
-  const endLock = () => {
-    if (lockTimerRef.current) { clearTimeout(lockTimerRef.current); lockTimerRef.current = null; }
-    setScreenLock(false);
+  const stopProcessing = () => {
+    if (processTimerRef.current) { clearTimeout(processTimerRef.current); processTimerRef.current = null; }
+    setProcessing(false);
   };
 
   // Debounced spoken confirmation. The trailing window resets on every
@@ -106,18 +153,33 @@ export default function Home() {
     }
   }, [templateLoaded, loadedTemplate, hasParsed]);
 
-  const { isListening: descListening, toggleListening: toggleDescListening } = useSpeechRecognition({
-    onResult: (transcript, isFinal) => {
-      if (isFinal) {
-        setDescription((prev) => (prev ? prev + " " + transcript : transcript));
-      }
-    }
+  const {
+    isListening: descListening,
+    toggleListening: toggleDescListening,
+    stopListening: stopDescListening,
+    supported: speechSupported,
+  } = useSpeechRecognition({
+    continuous: true,
+    onResult: updateTranscript,
+    onEnd: () => finishDescribe(),
   });
 
-  const handleVoiceCommand = (transcript: string) => {
-    const command = transcript.trim();
-    if (!command) return;
+  // Mic 1 — dictation is captured into the description box; generation is a
+  // separate explicit step (the "Generate" button).
+  const finishDescribe = () => {
+    clearListenTimers();
+    setListeningMic(null);
+    const text = finalsRef.current.trim();
+    finalsRef.current = "";
+    setLiveTranscript("");
+    if (cancelledRef.current || !text) {
+      cancelledRef.current = false;
+      return;
+    }
+    setDescription((prev) => (prev ? prev + " " + text : text));
+  };
 
+  const runVoiceCommand = (command: string) => {
     // "Save template" is a UI action, handle it locally without an AI call.
     if (command.toLowerCase().includes("save template")) {
       setTemplateName(businessName || "New Template");
@@ -133,13 +195,13 @@ export default function Home() {
     }
 
     const loadingToast = toast.loading(`Applying: "${command}"`);
-    startLock();
+    startProcessing();
     applyVoiceCommand.mutate(
       { data: { command, lineItems, settings } },
       {
         onSuccess: (data) => {
           toast.dismiss(loadingToast);
-          endLock();
+          stopProcessing();
           if (data.understood) {
             setLineItems(data.lineItems);
             setSettings(data.settings);
@@ -151,19 +213,67 @@ export default function Home() {
         },
         onError: () => {
           toast.dismiss(loadingToast);
-          endLock();
+          stopProcessing();
           toast.error("Failed to apply command. Please try again.");
         },
       }
     );
   };
 
-  const { isListening: formListening, toggleListening: toggleFormListening } = useSpeechRecognition({
-    onResult: (transcript, isFinal) => {
-      if (!isFinal) return;
-      handleVoiceCommand(transcript);
-    }
+  const {
+    isListening: formListening,
+    toggleListening: toggleFormListening,
+    stopListening: stopFormListening,
+  } = useSpeechRecognition({
+    continuous: true,
+    onResult: updateTranscript,
+    onEnd: () => finishEdit(),
   });
+
+  // Mic 2 — once capture ends, apply the spoken command to the quote.
+  const finishEdit = () => {
+    clearListenTimers();
+    setListeningMic(null);
+    const command = finalsRef.current.trim();
+    finalsRef.current = "";
+    setLiveTranscript("");
+    if (cancelledRef.current || !command) {
+      cancelledRef.current = false;
+      return;
+    }
+    runVoiceCommand(command);
+  };
+
+  const startDescribeListening = () => {
+    if (!speechSupported) {
+      toast.error("Speech recognition is not supported in your browser.");
+      return;
+    }
+    if (overlayOpen) return;
+    beginListening("describe", () => stopDescListening());
+    toggleDescListening();
+  };
+
+  const startEditListening = () => {
+    if (!speechSupported) {
+      toast.error("Speech recognition is not supported in your browser.");
+      return;
+    }
+    if (overlayOpen) return;
+    beginListening("edit", () => stopFormListening());
+    toggleFormListening();
+  };
+
+  const handleVoiceStop = () => {
+    if (listeningMic === "describe") stopDescListening();
+    else if (listeningMic === "edit") stopFormListening();
+  };
+
+  const handleVoiceCancel = () => {
+    cancelledRef.current = true;
+    if (listeningMic === "describe") stopDescListening();
+    else if (listeningMic === "edit") stopFormListening();
+  };
 
   const handleParse = () => {
     if (!description.trim()) {
@@ -173,10 +283,10 @@ export default function Home() {
     // Generation is the processing step for Mic 1 (dictation fills this textarea,
     // then generation runs), so we lock the screen here regardless of whether the
     // description was typed or spoken — it is the same heavy AI step (Bug #3/#5).
-    startLock();
+    startProcessing();
     parseQuote.mutate({ data: { description } }, {
       onSuccess: (data) => {
-        endLock();
+        stopProcessing();
         setLineItems(data.lineItems);
         setSettings(data.settings);
         if (data.businessName) {
@@ -185,7 +295,7 @@ export default function Home() {
         setHasParsed(true);
       },
       onError: (err) => {
-        endLock();
+        stopProcessing();
         toast.error("Failed to generate quote. Please try again.");
       }
     });
@@ -269,7 +379,7 @@ export default function Home() {
                     variant={descListening ? "default" : "secondary"}
                     aria-label="Describe your job out loud to generate a quote"
                     className={cn("absolute bottom-3 right-3 rounded-full transition-all", descListening && "bg-destructive hover:bg-destructive/90 animate-pulse")}
-                    onClick={toggleDescListening}
+                    onClick={startDescribeListening}
                     disabled={parseQuote.isPending}
                   >
                     <Mic className="w-4 h-4" />
@@ -481,7 +591,7 @@ export default function Home() {
                     "h-14 w-14 rounded-full shadow-2xl transition-all",
                     formListening ? "bg-destructive hover:bg-destructive shadow-destructive/40" : "bg-primary hover:bg-primary/90 shadow-primary/40"
                   )}
-                  onClick={toggleFormListening}
+                  onClick={startEditListening}
                 >
                   {formListening ? (
                     <>
@@ -499,9 +609,18 @@ export default function Home() {
         </div>
       )}
 
-      {screenLock && (
+      <VoiceOverlay
+        open={listeningMic !== null}
+        title={listeningMic === "describe" ? "Describe your job to generate a quote" : "Speak your change to the quote"}
+        transcript={liveTranscript}
+        secondsLeft={secondsLeft}
+        onStop={handleVoiceStop}
+        onCancel={handleVoiceCancel}
+      />
+
+      {processing && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background/85 backdrop-blur-sm"
           role="alertdialog"
           aria-busy="true"
           aria-live="assertive"

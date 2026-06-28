@@ -31,7 +31,7 @@ This is a **single living document**. The filename carries the current version
 | **v1.0** | 25 Jun 2026 | Initial consolidated spec — all bugs + enhancements, **two-mic** model, Australian tax rules (10% GST, call-out fee, public-holiday surcharge), template save/load, build iterations. |
 | **v2.0** | 27 Jun 2026 | **Auth pivot:** adopted **Replit-managed Clerk** with **email verification only**. ~~Removed mobile/SMS verification, Twilio, and dual (email+SMS) verification.~~ Added *Email Templates & Sender* section (verification + welcome emails, 10-min OTP expiry, default vs branded custom-domain sender). |
 | **v3.0** | 28 Jun 2026 | **Try-before-register access model** (§2A): anonymous users can generate quotes; registration is gated **only** at Save / Download / Email. Registration now captures **business name, ABN, address** to pre-populate the PDF. **PDF mobile field** changed to a fixed **`+61 4`** prefix + **8 digits**. ~~Removed the PDF "phone" field~~ and ~~the earlier `+61` + 10-digit-starting-`04` mobile rule~~. Added an **AU address-lookup** future-enhancement note. Introduced this versioning + change-tracking system. |
-| **v4.0** | 28 Jun 2026 | **As-built capture:** Iterations 1 & 2 **built and verified** in the running app. Added **§5A As-Built / Deployed Parameters** recording every concrete value shipped — incl. the **spoken-confirmation debounce timer (1500 ms)**, the **screen-lock auto-unlock timeout (30 s)**, voice-recognition settings (`continuous=false`, `interimResults=true`, `lang=en-AU`), the **case-insensitive duplicate-name guard** (app pre-check + DB unique index on `lower(name)` + 23505 catch → HTTP 409), and the **React Query / caching parameters** (`staleTime 60 s`, `gcTime 5 min`, `refetchOnWindowFocus=false`, `retry=1`, `localStorage` template cache). Build iterations §6 mark **Iter 1 & 2 as DONE**. |
+| **v4.0** | 28 Jun 2026 | **As-built capture:** Iterations 1 & 2 **built and verified** in the running app. Added **§5A As-Built / Deployed Parameters** recording every concrete value shipped — incl. the **spoken-confirmation debounce timer (1500 ms)**, the **voice screen-lock timers (30 s listening/speaking window on mic tap + 30 s processing auto-unlock)**, voice-recognition settings (`continuous=true`, `interimResults=true`, `lang=en-AU`), the **case-insensitive duplicate-name guard** (app pre-check + DB unique index on `lower(name)` + 23505 catch → HTTP 409), and the **React Query / caching parameters** (`staleTime 60 s`, `gcTime 5 min`, `refetchOnWindowFocus=false`, `retry=1`, `localStorage` template cache). Build iterations §6 mark **Iter 1 & 2 as DONE**. |
 
 ---
 
@@ -154,15 +154,23 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - **Acceptance:** A first-time user can tell which mic creates a quote vs. which
   edits it, without instruction.
 
-### Bug #5 — Screen lock during voice processing
-- While voice is being processed, show a **full-screen overlay** with a spinner
-  and *"Processing voice…"*.
-- **Disable all interactions:** buttons, inputs, and scrolling.
-- **Auto-unlock** when processing completes or errors.
-- **30-second timeout** safeguard to prevent an infinite lock.
+### Bug #5 — Screen lock during voice listening AND processing
+- The instant **either mic is tapped**, show a **full-screen blocking overlay**
+  with a **large centred pulsing mic**, *"Listening…"*, an animated equalizer, a
+  **live transcript**, and a **30 s countdown** — giving the user a clear window
+  to **speak** while the mic captures (Stop / Done to finish early, Cancel to
+  discard).
+- After capture, show a second **full-screen overlay** with a spinner and
+  *"Processing voice…"* while the AI step runs.
+- **Disable all interactions:** buttons, inputs, and scrolling, in both phases.
+- **Auto-unlock** when listening ends / processing completes or errors; force
+  teardown on mic start-failure so it can never stay stuck.
+- **30-second timeout** on each phase (speaking window auto-stop; processing
+  safety unlock).
 - Applies to **both** mics.
-- **Acceptance:** During processing the UI is non-interactive; it always unlocks
-  within 30s even on failure.
+- **Acceptance:** Tapping a mic blocks the screen with the listening overlay for
+  up to 30 s of capture; processing is non-interactive and always unlocks within
+  30s even on failure.
 
 ### Bug #6 — Prevent duplicate template names
 - Before saving a template, check whether a template with the same name already
@@ -323,12 +331,14 @@ not listed here as as-built is still **planned/pending** (Iterations 3–4).
 
 | Parameter | Deployed value | Notes |
 |-----------|----------------|-------|
-| ✅ Speech recognition — `continuous` | **`false`** | Stops after a single utterance for faster turnaround. Tunable per-call (defaults to `false`). |
-| ✅ Speech recognition — `interimResults` | **`true`** | Shows partial transcription while speaking. |
+| ✅ Speech recognition — `continuous` | **`true`** | Keeps capturing through natural pauses for the full 30 s speaking window (changed from `false` so the user is not cut off mid-pause). Tunable per-call. |
+| ✅ Speech recognition — `interimResults` | **`true`** | Shows partial transcription live in the listening overlay while speaking. |
 | ✅ Speech recognition — `lang` | **`en-AU`** | Australian English for local accent/terms. |
 | ✅ **Spoken-confirmation debounce timer** | **`1500 ms`** | After a quote recalculation, **"Quote updated"** is spoken via speech synthesis on a **1500 ms** debounce — rapid successive edits collapse to **one** final spoken confirmation (Bug #1). Each committed change still shows a toast. |
-| ✅ **Screen-lock auto-unlock timeout** | **`30 000 ms` (30 s)** | The *"Processing voice…"* full-screen overlay locks interactions + scroll during processing and **force-unlocks after 30 s** as a safety net so the UI can never hang locked (Bug #3 + #5). Normal path unlocks immediately on success/error. |
-| ✅ Screen-lock scope | **Both mics** | Overlay + scroll-lock applied to Mic 1 (generate) and Mic 2 (edit). |
+| ✅ **Listening-window (speaking) timeout** | **`30 000 ms` (30 s)** | The moment **either mic is tapped**, a full-screen blocking **"Listening…"** overlay opens (large centred pulsing mic, equalizer, live transcript, countdown bar) and gives the user **30 s to speak**, after which capture **auto-stops**. The user can end early with **Stop / Done**, or discard with **Cancel** (Bug #3 + #5, dual-mic prototype). |
+| ✅ **Processing auto-unlock timeout** | **`30 000 ms` (30 s)** | After capture, the *"Processing voice…"* spinner overlay runs the AI step (generate / apply command) and **force-unlocks after 30 s** as a safety net so the UI can never hang. Normal path unlocks immediately on success/error. |
+| ✅ Start-failure teardown | **Always force-closes** | If the mic fails to start (permission denied / invalid state), the overlay is torn down immediately via the recognition `onEnd` path and an error toast is shown — the screen can never stay locked behind a stuck overlay. |
+| ✅ Screen-lock scope | **Both mics** | Listening overlay + processing overlay + scroll-lock applied to Mic 1 (generate) and Mic 2 (edit). |
 | ✅ Mic count / roles | **2 distinct mics** | Mic 1 "Generate Quote" + Mic 2 "Edit Quote", each with its own label, tooltip, placement and `aria-label` (Bug #4). |
 
 ### 5A.2 Numeric input UX (Iteration 2) — `numeric-input.tsx`
@@ -391,7 +401,7 @@ repeatedly.
 
 ### 🟦 Iteration 1 — Dual-Mic Voice System <mark>✅ DONE (v4.0)</mark>
 - Bug #1 (voice confirmation, debounced) — **as-built: 1500 ms debounce** (§5A.1)
-- Bug #3 + Bug #5 (screen lock + disable during processing + 30s timeout) — **as-built: 30 s auto-unlock** (§5A.1)
+- Bug #3 + Bug #5 (screen lock during **listening AND processing** + disable interactions + 30s timeout) — **as-built: full-screen "Listening…" overlay with 30 s speaking window on mic tap + "Processing voice…" overlay with 30 s safety auto-unlock; force-teardown on mic start-failure** (§5A.1)
 - Bug #4 (two distinct, clearly-labelled mics per §3) — **as-built** (§5A.1)
 - Voice-recognition speed tuning — **as-built: `continuous=false`, `interimResults=true`, `en-AU`** (§5A.1)
 - **Why together:** all touch the mic flow / `home.tsx` / `use-speech.ts`.

@@ -85,24 +85,32 @@ export function useSpeechRecognition({
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch (e) { /* already stopped */ }
       setIsListening(false);
     } else {
       try {
         recognitionRef.current.start();
         setIsListening(true);
       } catch (e) {
+        // start() can throw synchronously (permission denied, invalid state).
+        // No onend will fire, so we must signal the caller to tear down its
+        // overlay/lock here — otherwise the UI stays stuck on "Listening…".
         console.error("Could not start recognition:", e);
+        setIsListening(false);
+        toast.error("Couldn't start the microphone. Please check permissions and try again.");
+        if (onEndRef.current) onEndRef.current();
       }
     }
   }, [isListening]);
 
   const stopListening = useCallback(() => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
+    // Not gated on isListening: stop() must always be attempted so a stuck or
+    // never-started session can still be torn down by the caller.
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) { /* already stopped */ }
       setIsListening(false);
     }
-  }, [isListening]);
+  }, []);
 
   return {
     isListening,
