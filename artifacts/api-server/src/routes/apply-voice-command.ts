@@ -16,8 +16,21 @@ router.post("/apply-voice-command", async (req, res): Promise<void> => {
   const systemPrompt = `You are a voice assistant that edits an Australian tradesperson's quote.
 The user speaks a command and you apply it to the CURRENT quote state, then return the COMPLETE updated quote.
 
+IMPORTANT: a line item's NAME/DESCRIPTION shown to the user is its "label" field.
+When the user renames an item or changes its description, you update "label".
+
 You can:
 - Change a line item's unitPrice, quantity, label, or unit
+- RENAME a line item / change its name or description: update that line item's "label"
+  (NOT the "description" field). The user may say "rename", "change name",
+  "change description", "call it", etc. Identify the target item by position
+  ("item 1", "the first item"), by its current name, or by context. Capitalise the
+  new name sensibly and DO NOT change unitPrice, quantity, unit or overtimePercent
+  when only renaming. Examples:
+  - "Rename item 1 to canapes" → set the FIRST line item's label to "Canapes"
+  - "Change description to prawn skewers" → set the relevant line item's label to "Prawn skewers"
+  - "Rename canapes to crostini" → find the item whose label is "Canapes" and set its label to "Crostini"
+  - "Change item name to mini quiches" → set the relevant line item's label to "Mini quiches"
 - Apply OVERTIME to a line item as a PERCENTAGE MARKUP on its base rate:
   - "overtimePercent" is a percentage added on top of the base unitPrice. The
     effective charged rate = unitPrice + (unitPrice * overtimePercent / 100).

@@ -86,6 +86,7 @@ export default function Home() {
   const processTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalsRef = useRef("");
+  const liveTranscriptRef = useRef("");
   const cancelledRef = useRef(false);
   const wakeLockRef = useRef<any>(null);
   const wakeLockWantedRef = useRef(false);
@@ -154,6 +155,7 @@ export default function Home() {
     finalsRef.current = "";
     cancelledRef.current = false;
     activeMicRef.current = mic;
+    liveTranscriptRef.current = "";
     setLiveTranscript("");
   };
 
@@ -172,13 +174,18 @@ export default function Home() {
   };
 
   // Accumulate finalized chunks; show finals + the current interim live.
+  // liveTranscriptRef mirrors exactly what's shown in the overlay (finals +
+  // current interim) so that on Stop we capture the COMPLETE transcript, not just
+  // the finalized chunks — interim words spoken right before Stop are otherwise
+  // lost (Bug #13).
   const updateTranscript = (transcript: string, isFinal: boolean) => {
     if (isFinal) {
       finalsRef.current = (finalsRef.current ? finalsRef.current + " " : "") + transcript;
-      setLiveTranscript(finalsRef.current);
+      liveTranscriptRef.current = finalsRef.current;
     } else {
-      setLiveTranscript((finalsRef.current ? finalsRef.current + " " : "") + transcript);
+      liveTranscriptRef.current = (finalsRef.current ? finalsRef.current + " " : "") + transcript;
     }
+    setLiveTranscript(liveTranscriptRef.current);
   };
 
   // AI processing step (generation / voice-command apply) shows a spinner
@@ -200,12 +207,16 @@ export default function Home() {
   // Debounced spoken confirmation. The trailing window resets on every
   // successful edit, so a burst of rapid voice edits collapses into a single
   // "Quote updated" once the user pauses for ~1.5s. (Toasts still fire per edit.)
-  const speakQuoteUpdated = () => {
+  const speakQuoteUpdated = () => speakPhrase("Quote updated");
+
+  // Debounced spoken confirmation for an arbitrary phrase (e.g. a rename). The
+  // trailing window collapses a burst of rapid edits into a single utterance.
+  const speakPhrase = (phrase: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
     speakTimerRef.current = setTimeout(() => {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance("Quote updated");
+      const utterance = new SpeechSynthesisUtterance(phrase);
       utterance.lang = "en-AU";
       window.speechSynthesis.speak(utterance);
     }, 1500);
@@ -249,8 +260,9 @@ export default function Home() {
     clearListenTimers();
     startingRef.current = false;
     setListeningMic(null);
-    const text = finalsRef.current.trim();
+    const text = liveTranscriptRef.current.trim();
     finalsRef.current = "";
+    liveTranscriptRef.current = "";
     setLiveTranscript("");
     if (cancelledRef.current || !text) {
       cancelledRef.current = false;
@@ -283,10 +295,24 @@ export default function Home() {
           toast.dismiss(loadingToast);
           stopProcessing();
           if (data.understood) {
+            // Bug #12 — detect a rename deterministically by diffing labels BY ID
+            // (the item name shown to the user) so we confirm "Item renamed to X".
+            // ID-based so it's robust to reordering and to add/remove happening in
+            // the same command.
+            const prevLabels = new Map(lineItems.map((it) => [it.id, it.label]));
+            const renamed = data.lineItems.filter(
+              (it) => prevLabels.has(it.id) && prevLabels.get(it.id) !== it.label,
+            );
             setLineItems(data.lineItems);
             setSettings(data.settings);
             toast.success(data.message);
-            speakQuoteUpdated();
+            if (renamed.length === 1) {
+              speakPhrase(`Item renamed to ${renamed[0].label}`);
+            } else if (renamed.length > 1) {
+              speakPhrase("Items renamed");
+            } else {
+              speakQuoteUpdated();
+            }
           } else {
             toast.error(data.message || "Couldn't understand that command");
           }
@@ -318,8 +344,9 @@ export default function Home() {
     clearListenTimers();
     startingRef.current = false;
     setListeningMic(null);
-    const command = finalsRef.current.trim();
+    const command = liveTranscriptRef.current.trim();
     finalsRef.current = "";
+    liveTranscriptRef.current = "";
     setLiveTranscript("");
     if (cancelledRef.current || !command) {
       cancelledRef.current = false;
@@ -397,6 +424,7 @@ export default function Home() {
     setListeningMic(null);
     setLiveTranscript("");
     finalsRef.current = "";
+    liveTranscriptRef.current = "";
   };
 
   // Bug #7 — Retry from the permission dialog. Re-checks permission via
