@@ -38,6 +38,26 @@ iterations**, and defines the **expected UI** for each.
 
 ---
 
+## 2A. Access & Gating Model *(revised)*
+
+QuoteCraft is **try-before-you-register**:
+
+- **Anonymous use (no account):** A first-time / unregistered user **can generate
+  an initial quote by voice or text** (Mic 1) and see the calculated result.
+  Quoting is **free and ungated**.
+- **Registration gate:** An account (**Clerk, email-verified**) is required the
+  moment the user clicks **Save**, **Download PDF**, or **Email to client**.
+  These actions are blocked until the user registers/logs in and verifies email.
+- **Why:** capture the lead and business profile exactly when the user gets value
+  (a finished quote they want to keep or send).
+- **Registration captures the business profile** — **business name, ABN, address**
+  (plus full name + email) — which **pre-populate the PDF** so exports are branded
+  without re-typing.
+- After registering, the user is **returned to complete the action they tried**
+  (save/download/email) without losing the in-progress quote.
+
+---
+
 ## 3. Microphone Model (Expected UI) — TWO DISTINCT MICS
 
 The product uses two purpose-built microphones. Each has a clear, separate role,
@@ -139,12 +159,16 @@ distinct placement, and its own label/tooltip so users never confuse them.
   calculations no longer fire on every keystroke.
 
 ### Enhancement #2 — Branded PDF export
+- **Pre-populated from the registered business profile** (§2A): **business name,
+  ABN, address, email** — editable, shown in the PDF header.
 - When the user requests a PDF, show a frontend form with:
   - **Logo upload** (optional, top-left corner of PDF)
   - **Contact name** (mandatory)
-  - **Mobile** (pre-populated from saved business profile — see dependency §6)
-  - **Email** (pre-populated from the Clerk account / business profile)
-  - **ABN** (optional; if present, show in PDF header)
+  - **Mobile** *(optional)* — **frontend-validated**: a fixed **`+61`** prefix is
+    shown on the leading edge of the field; the user types the remaining
+    **10 digits**, which **must start with `04`**. If blank, it is omitted from
+    the PDF; if entered, it must pass validation before export.
+  - **ABN** (optional override; if present, show in PDF header)
   - **ACN** (optional; if present, show in PDF header)
 - Generated PDF includes all quote details, GST breakdown, and footer:
   *"Thank you for your business! We are looking forward to hearing from you!"*
@@ -155,10 +179,11 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - **Auth provider:** **Replit-managed Clerk**. Email + password sign-up with
   **email verification** only. **No mobile/SMS verification** (removed) — **no
   Twilio**. SSO (Google/Apple/etc.) can be enabled later if desired.
-- **Fields:** full name, business name, email, password (Clerk password policy,
-  min 8 chars).
+- **Fields:** full name, **business name, ABN, address** (these pre-populate the
+  PDF), email, password (Clerk password policy, min 8 chars).
 - **Email verification:** a **6-digit OTP** is emailed at sign-up and **must be
-  verified** before access is granted.
+  verified** before any **save / download / email** action completes (see §2A —
+  quote *generation* itself needs no account).
 - **OTP expiry:** **10 minutes** (Clerk default). This expiry **must be clearly
   stated in the verification email** (see *Email Templates & Sender* below).
 - **Resend cooldown:** short timer (~30–60s) before "Resend code" re-enables —
@@ -173,9 +198,10 @@ distinct placement, and its own label/tooltip so users never confuse them.
   displaying the user's **saved templates** and **quote history**.
   - *Note:* quote history is **net-new persistence** — requires a new table and
     save-on-create wiring.
-- **Acceptance:** A user cannot access the app until their email is verified; the
-  code expiry is enforced **and clearly stated in the email**; passwords are
-  never handled by the app.
+- **Acceptance:** Anonymous users can generate a quote; **save/download/email are
+  blocked until email is verified**; after verifying, the user resumes the exact
+  action they triggered; code expiry is enforced **and stated in the email**;
+  passwords are never handled by the app.
 
 ### Email Templates & Sender (Clerk)
 
@@ -280,7 +306,8 @@ app data and the business-profile fields used on quotes/PDFs.
 | Password (hashed) | Clerk — app never handles it |
 | Session / tokens | Clerk |
 | Marketing-consent flag | Your PostgreSQL (or Clerk metadata) |
-| Business profile (business name, ABN, address, **phone**, logo) for branding | Your PostgreSQL |
+| Business profile (business name, ABN, address, logo) for branding | Your PostgreSQL |
+| Mobile — **optional**, entered per PDF export (not part of registration) | Your PostgreSQL (only if provided) |
 | Templates & quote history | Your PostgreSQL |
 
 - **Development** and **production** use **separate databases** automatically.
@@ -336,3 +363,6 @@ app data and the business-profile fields used on quotes/PDFs.
 5. **Branded sender:** do you own a domain (e.g. `quotecraft.com.au`) you'd like
    verification/welcome emails sent from, or is the default Clerk sender fine for
    now?
+6. **Mobile format:** spec is `+61` prefix **plus** a 10-digit number starting
+   `04`. Strict E.164 would be `+61 4XX XXX XXX` (drop the leading 0). Confirm you
+   want the literal `+61` + `04…` display, or the standard `+61 4…` form.

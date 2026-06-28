@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./_group.css";
-import { Check, ShieldCheck, Mail, Building2, User, Lock } from "lucide-react";
+import { Check, ShieldCheck, Mail, Building2, User, Lock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Registration() {
@@ -32,6 +32,15 @@ export function Registration() {
         </header>
 
         <main className="flex-1 overflow-y-auto px-5 py-6 flex flex-col">
+          {/* Context banner — registration is triggered by save/download/email */}
+          <div className="mb-5 rounded-lg bg-accent/10 border border-accent/30 px-3 py-2.5 text-xs text-foreground/80 flex items-start gap-2">
+            <Lock className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+            <span>
+              Register to <span className="font-semibold">save, download or email</span> your quote.
+              Generating quotes is always free — no account needed.
+            </span>
+          </div>
+
           {/* Step Indicator — 2 steps: Details -> Verify email */}
           <div className="flex items-center justify-center mb-8 relative px-10">
             <div className="absolute top-[14px] left-10 right-10 h-[2px] bg-border -z-10"></div>
@@ -72,6 +81,11 @@ export function Registration() {
                     <span className="font-medium">Dave's Plumbing</span>
                     <span className="text-xs text-muted-foreground">ABN 12 345 678 901</span>
                   </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <span>42 Wallaby Way, Sydney NSW 2000</span>
                 </div>
 
                 <div className="flex items-center gap-2.5">

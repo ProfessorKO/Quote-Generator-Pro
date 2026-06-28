@@ -29,9 +29,13 @@ export function PdfExport() {
     name: "Dave's Plumbing",
     abn: "12 345 678 901",
     address: "42 Wallaby Way, Sydney NSW 2000",
-    phone: "0412 345 678",
     email: "dave@davesplumbing.com.au",
   });
+
+  const [mobile, setMobile] = useState("");
+  const mobileValid = mobile.length === 10 && mobile.startsWith("04");
+  const formatMobile = (m: string) =>
+    m.length === 10 ? `${m.slice(0, 4)} ${m.slice(4, 7)} ${m.slice(7)}` : m;
 
   const handleDetailChange = (field: keyof typeof businessDetails, value: string) => {
     setBusinessDetails(prev => ({ ...prev, [field]: value }));
@@ -69,7 +73,7 @@ export function PdfExport() {
                       <div className="font-bold text-[10px] text-primary">{businessDetails.name}</div>
                       <div className="text-muted-foreground">ABN: {businessDetails.abn}</div>
                       <div className="text-muted-foreground">{businessDetails.address}</div>
-                      <div className="text-muted-foreground">{businessDetails.phone}</div>
+                      {mobileValid && <div className="text-muted-foreground">{formatMobile(mobile)}</div>}
                       <div className="text-muted-foreground">{businessDetails.email}</div>
                     </div>
                   </div>
@@ -201,15 +205,34 @@ export function PdfExport() {
                       <Label htmlFor="biz-address">Address</Label>
                       <Input id="biz-address" value={businessDetails.address} onChange={(e) => handleDetailChange("address", e.target.value)} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="biz-phone">Phone</Label>
-                        <Input id="biz-phone" value={businessDetails.phone} onChange={(e) => handleDetailChange("phone", e.target.value)} />
+                    <div className="space-y-1.5">
+                      <Label htmlFor="biz-email">Email</Label>
+                      <Input id="biz-email" type="email" value={businessDetails.email} onChange={(e) => handleDetailChange("email", e.target.value)} />
+                      <p className="text-xs text-muted-foreground">From your verified account</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="biz-mobile">
+                        Mobile <span className="font-normal text-muted-foreground">(optional)</span>
+                      </Label>
+                      <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-border bg-muted text-sm font-medium text-muted-foreground select-none">
+                          +61
+                        </span>
+                        <Input
+                          id="biz-mobile"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={mobile}
+                          onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+                          className={`rounded-l-none ${mobile && !mobileValid ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                          placeholder="04XX XXX XXX"
+                        />
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="biz-email">Email</Label>
-                        <Input id="biz-email" type="email" value={businessDetails.email} onChange={(e) => handleDetailChange("email", e.target.value)} />
-                      </div>
+                      {mobile && !mobileValid ? (
+                        <p className="text-xs text-red-600">Must be 10 digits starting with 04.</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Optional · 10 digits, must start with 04</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
