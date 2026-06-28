@@ -18,7 +18,7 @@ single specification, groups them into the **minimum number of build
 iterations**, and defines the **expected UI** for each.
 
 > **Key decision (this revision):** The app **keeps TWO microphone icons** — one
-> for *initial quote generation* and one for *making changes to an existing
+> for *initial quote generation*l and one for *making changes to an existing
 > quote*. They are intentional and distinct, **not** duplicates to be merged.
 
 ---
