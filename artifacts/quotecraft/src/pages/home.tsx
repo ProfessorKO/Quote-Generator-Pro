@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MicPermissionDialog } from "@/components/mic-permission-dialog";
+import { checkMicPermission } from "@/lib/mic-permission";
 import { NumericInput } from "@/components/numeric-input";
 import { VoiceOverlay } from "@/components/voice-overlay";
 
@@ -68,6 +70,8 @@ export default function Home() {
   const [businessName, setBusinessName] = useState<string>(restored?.businessName ?? "");
   const [hasParsed, setHasParsed] = useState<boolean>(restored?.hasParsed ?? false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
+  const [retryingPermission, setRetryingPermission] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
   const LISTEN_WINDOW_SECONDS = 30;
@@ -324,32 +328,44 @@ export default function Home() {
     runVoiceCommand(command);
   };
 
-  const startDescribeListening = () => {
+  // Bug #7 — every mic tap re-checks permission via getUserMedia() (never cached).
+  // If granted we start a FRESH recogniser; if denied we show device-specific
+  // written instructions. The overlay only opens from onStart (Bug #11), and the
+  // start-lock + cleaning the other mic guarantee a single active recogniser.
+  const beginMic = async (mic: "describe" | "edit") => {
     if (!speechSupported) {
       toast.error("Speech recognition is not supported in your browser.");
       return;
     }
     if (overlayOpen || startingRef.current) return;
-    // Prepare state, then start a FRESH recogniser. The overlay opens from
-    // onStart once the session is confirmed running (Bug #11). The lock + cleaning
-    // the other mic guarantee only one recogniser can ever be active.
     startingRef.current = true;
-    forceCleanForm();
-    prepareListening("describe");
-    startDescRecognition();
+    activeMicRef.current = mic; // so Retry knows which mic to resume
+    setRetryingPermission(true);
+    let granted = false;
+    try {
+      granted = await checkMicPermission();
+    } finally {
+      setRetryingPermission(false);
+    }
+    if (!granted) {
+      startingRef.current = false;
+      setPermissionDialogOpen(true);
+      return;
+    }
+    setPermissionDialogOpen(false);
+    if (mic === "describe") {
+      forceCleanForm();
+      prepareListening("describe");
+      startDescRecognition();
+    } else {
+      forceCleanDesc();
+      prepareListening("edit");
+      startEditRecognition();
+    }
   };
 
-  const startEditListening = () => {
-    if (!speechSupported) {
-      toast.error("Speech recognition is not supported in your browser.");
-      return;
-    }
-    if (overlayOpen || startingRef.current) return;
-    startingRef.current = true;
-    forceCleanDesc();
-    prepareListening("edit");
-    startEditRecognition();
-  };
+  const startDescribeListening = () => { void beginMic("describe"); };
+  const startEditListening = () => { void beginMic("edit"); };
 
   // Stop whichever mic is currently active (used by the 30s window expiry).
   const stopActiveListening = () => {
@@ -383,16 +399,19 @@ export default function Home() {
     finalsRef.current = "";
   };
 
-  // Bug #7 — re-prompt the mic the user last tried after a permission denial.
+  // Bug #7 — Retry from the permission dialog. Re-checks permission via
+  // getUserMedia() (inside beginMic) and resumes the mic the user last tapped;
+  // the dialog stays open if access is still blocked.
   const retryListening = () => {
     const mic = activeMicRef.current;
-    if (mic === "describe") startDescribeListening();
-    else if (mic === "edit") startEditListening();
+    if (mic === "describe") void beginMic("describe");
+    else if (mic === "edit") void beginMic("edit");
   };
 
   // Bug #7 — recognition error handler. A denied mic leaves the overlay stuck,
-  // so we force teardown and offer a Retry. Re-assigned each render so it always
-  // closes over the latest state; called via speechErrorRef from both hooks.
+  // so we force teardown. Permission denials show the device-specific instructions
+  // dialog; other start failures show a transient toast. Re-assigned each render
+  // so it always closes over the latest state; called via speechErrorRef.
   speechErrorRef.current = (error: string) => {
     const denied =
       error === "not-allowed" ||
@@ -401,10 +420,7 @@ export default function Home() {
     cancelledRef.current = true; // discard any partial capture
     resetVoiceSession();
     if (denied) {
-      toast.error(
-        "Microphone access denied. Please allow microphone access in your browser settings and try again.",
-        { action: { label: "Retry", onClick: () => retryListening() } }
-      );
+      setPermissionDialogOpen(true);
     } else if (error === "start-failed") {
       // Bug #11 — recognition.start() threw; the overlay was never shown.
       toast.error("Couldn't start the microphone. Please try again.", {
@@ -876,6 +892,13 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MicPermissionDialog
+        open={permissionDialogOpen}
+        onOpenChange={setPermissionDialogOpen}
+        onRetry={retryListening}
+        retrying={retryingPermission}
+      />
 
     </Layout>
   );
