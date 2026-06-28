@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./_group.css";
-import { Check, ShieldCheck, Mail, Building2, User, ChevronRight, Lock } from "lucide-react";
+import { Check, ShieldCheck, Mail, Building2, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Registration() {
@@ -32,30 +32,25 @@ export function Registration() {
         </header>
 
         <main className="flex-1 overflow-y-auto px-5 py-6 flex flex-col">
-          {/* Step Indicator */}
-          <div className="flex items-center justify-between mb-8 relative">
-            <div className="absolute top-1/2 left-0 w-full h-[2px] bg-border -z-10 -translate-y-1/2"></div>
-            <div className="absolute top-1/2 left-0 w-[50%] h-[2px] bg-primary -z-10 -translate-y-1/2"></div>
-            
-            <div className="flex flex-col items-center gap-1.5 bg-background px-1">
+          {/* Step Indicator — 2 steps: Details -> Verify email */}
+          <div className="flex items-center justify-center mb-8 relative px-10">
+            <div className="absolute top-[14px] left-10 right-10 h-[2px] bg-border -z-10"></div>
+            <div className="absolute top-[14px] left-10 w-[calc(100%-5rem)] h-[2px] bg-primary -z-10"></div>
+
+            <div className="flex flex-col items-center gap-1.5 bg-background px-3">
               <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                 <Check className="w-4 h-4" />
               </div>
               <span className="text-[10px] font-semibold text-primary">Details</span>
             </div>
-            
-            <div className="flex flex-col items-center gap-1.5 bg-background px-1">
-              <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <Check className="w-4 h-4" />
-              </div>
-              <span className="text-[10px] font-semibold text-primary">Email</span>
-            </div>
-            
-            <div className="flex flex-col items-center gap-1.5 bg-background px-1">
+
+            <div className="flex-1"></div>
+
+            <div className="flex flex-col items-center gap-1.5 bg-background px-3">
               <div className="w-7 h-7 rounded-full border-2 border-primary bg-background text-primary flex items-center justify-center">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
               </div>
-              <span className="text-[10px] font-bold text-foreground">Mobile</span>
+              <span className="text-[10px] font-bold text-foreground">Verify email</span>
             </div>
           </div>
 
@@ -65,11 +60,11 @@ export function Registration() {
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-green-600" />
-                  Details Verified
+                  Account details
                 </h3>
                 <button className="text-xs text-primary font-medium">Edit</button>
               </div>
-              
+
               <div className="space-y-2.5 text-sm">
                 <div className="flex items-start gap-2.5">
                   <Building2 className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -78,32 +73,29 @@ export function Registration() {
                     <span className="text-xs text-muted-foreground">ABN 12 345 678 901</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2.5">
                   <User className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span>Dave Thompson</span>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span>dave@davesplumbing.com.au</span>
-                  </div>
-                  <Check className="w-4 h-4 text-green-600" />
+
+                <div className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span>dave@davesplumbing.com.au</span>
                 </div>
               </div>
             </div>
 
-            {/* Active Step Panel */}
+            {/* Active Step Panel — Verify email */}
             <div className="bg-card border border-border rounded-xl shadow-sm p-5 pb-6">
               <div className="mb-5 text-center">
                 <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Lock className="w-6 h-6" />
+                  <Mail className="w-6 h-6" />
                 </div>
-                <h2 className="text-xl font-bold text-foreground mb-1.5">Verify your mobile</h2>
+                <h2 className="text-xl font-bold text-foreground mb-1.5">Verify your email</h2>
                 <p className="text-sm text-muted-foreground">
-                  We sent a 6-digit code to <br/>
-                  <span className="font-semibold text-foreground">0412 345 678</span>
+                  We sent a 6-digit code to <br />
+                  <span className="font-semibold text-foreground">dave@davesplumbing.com.au</span>
                 </p>
               </div>
 
@@ -130,8 +122,15 @@ export function Registration() {
               </div>
 
               <Button className="w-full h-12 text-base font-medium shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
-                Verify & create account
+                Verify &amp; create account
               </Button>
+            </div>
+
+            {/* Clerk attribution */}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="w-3 h-3" />
+              <span>Secured by</span>
+              <span className="font-semibold text-foreground">Clerk</span>
             </div>
           </div>
         </main>
