@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Gj4wtaLsRZmCoGki-mK0s"
+uri = "file://docs/QuoteCraft-Requirements.md"
+type = "text"
+title = "QuoteCraft — Consolidated Requirements Document"
