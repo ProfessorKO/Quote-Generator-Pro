@@ -8,11 +8,13 @@ export function useSpeechRecognition({
   onResult,
   onEnd,
   onError,
+  onStart,
   continuous = false,
 }: {
   onResult?: (transcript: string, isFinal: boolean) => void;
   onEnd?: () => void;
   onError?: (error: string) => void;
+  onStart?: () => void;
   continuous?: boolean;
 }) {
   const [isListening, setIsListening] = useState(false);
@@ -21,34 +23,54 @@ export function useSpeechRecognition({
   const onResultRef = useRef(onResult);
   const onEndRef = useRef(onEnd);
   const onErrorRef = useRef(onError);
+  const onStartRef = useRef(onStart);
 
-  useEffect(() => {
-    onResultRef.current = onResult;
-  }, [onResult]);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  useEffect(() => { onStartRef.current = onStart; }, [onStart]);
 
-  useEffect(() => {
-    onEndRef.current = onEnd;
-  }, [onEnd]);
+  // Detach handlers and abort the current instance WITHOUT firing onend (handlers
+  // are nulled first). Used to discard a stale/dead instance — e.g. after a screen
+  // lock or tab switch kills recognition silently (Bug #11).
+  const cleanup = useCallback(() => {
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      recognition.onstart = null;
+      try { recognition.abort(); } catch { /* already stopped */ }
+    }
+  }, []);
 
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
-
-  useEffect(() => {
+  // ALWAYS build a brand-new recognition instance per start. Reusing an instance
+  // that was interrupted leaves a "dead" recogniser that opens but never captures
+  // (Bug #11). The overlay must only be shown by the caller from onStart, once the
+  // browser confirms the session is actually running.
+  const startListening = useCallback(() => {
     if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
+      toast.error("Speech recognition not supported in your browser.");
+      if (onErrorRef.current) onErrorRef.current("not-supported");
       return;
     }
+
+    cleanup(); // drop any stale instance before creating a fresh one
 
     const recognition = new SpeechRecognition();
     recognition.continuous = continuous;
     recognition.interimResults = true;
     recognition.lang = "en-AU";
 
+    recognition.onstart = () => {
+      setIsListening(true);
+      if (onStartRef.current) onStartRef.current();
+    };
+
     recognition.onresult = (event: any) => {
       let finalTranscript = "";
       let interimTranscript = "";
-
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
@@ -56,7 +78,6 @@ export function useSpeechRecognition({
           interimTranscript += event.results[i][0].transcript;
         }
       }
-
       if (onResultRef.current) {
         onResultRef.current(finalTranscript || interimTranscript, !!finalTranscript);
       }
@@ -65,9 +86,6 @@ export function useSpeechRecognition({
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
-      // Surface the raw error code to the caller so it can react to permission
-      // denial (not-allowed / service-not-allowed) by tearing down its overlay
-      // and prompting the user. onend still fires afterwards for cleanup.
       if (onErrorRef.current) onErrorRef.current(event.error);
     };
 
@@ -78,63 +96,46 @@ export function useSpeechRecognition({
 
     recognitionRef.current = recognition;
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
-
-  const toggleListening = useCallback(() => {
-    if (!recognitionRef.current) {
-      toast.error("Speech recognition not supported in your browser.");
-      return;
-    }
-
-    if (isListening) {
-      try { recognitionRef.current.stop(); } catch (e) { /* already stopped */ }
+    try {
+      recognition.start();
+    } catch (e: any) {
+      // start() can throw synchronously (permission denied, invalid state). No
+      // onstart/onend will fire, so signal the caller to surface the error and
+      // never show the overlay for a session that never began.
+      console.error("Could not start recognition:", e);
+      cleanup();
       setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (e: any) {
-        // start() can throw synchronously (permission denied, invalid state).
-        // No onend will fire, so we must signal the caller to tear down its
-        // overlay/lock here — otherwise the UI stays stuck on "Listening…".
-        console.error("Could not start recognition:", e);
-        setIsListening(false);
-        const name = e?.name || "";
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          // Permission denial on the synchronous path: route through onError so
-          // the caller shows the denial UX + Retry (same as the async onerror).
-          if (onErrorRef.current) onErrorRef.current("not-allowed");
-          else if (onEndRef.current) onEndRef.current();
-        } else {
-          toast.error("Couldn't start the microphone. Please check permissions and try again.");
-          if (onEndRef.current) onEndRef.current();
-        }
-      }
+      const name = e?.name || "";
+      const code =
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "not-allowed"
+          : "start-failed";
+      if (onErrorRef.current) onErrorRef.current(code);
     }
-  }, [isListening]);
+  }, [continuous, cleanup]);
 
   const stopListening = useCallback(() => {
-    // Not gated on isListening: stop() must always be attempted so a stuck or
-    // never-started session can still be torn down by the caller.
+    // Graceful stop: lets the final results + onend fire so the caller can process
+    // the captured command. Safe to call even if nothing is running.
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) { /* already stopped */ }
+      try { recognitionRef.current.stop(); } catch { /* already stopped */ }
       setIsListening(false);
     }
   }, []);
+
+  // Hard teardown with no onend — discard a stale session entirely (Bug #11).
+  const forceClean = useCallback(() => {
+    cleanup();
+    setIsListening(false);
+  }, [cleanup]);
+
+  useEffect(() => () => cleanup(), [cleanup]);
 
   return {
     isListening,
-    toggleListening,
+    startListening,
     stopListening,
+    forceClean,
     supported: !!SpeechRecognition,
   };
 }

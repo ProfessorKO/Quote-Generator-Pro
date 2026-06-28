@@ -87,6 +87,10 @@ export default function Home() {
   const wakeLockWantedRef = useRef(false);
   const activeMicRef = useRef<"describe" | "edit" | null>(null);
   const interruptedRef = useRef(false);
+  // True between a mic tap and the browser confirming the session (onStart). The
+  // overlay isn't open yet during this gap, so this lock stops a second mic tap
+  // from launching a concurrent recogniser (Bug #11).
+  const startingRef = useRef(false);
   // Indirection so the recognition hooks can call the latest error handler
   // without forcing it to be declared before them (avoids use-before-declare).
   const speechErrorRef = useRef<(error: string) => void>(() => {});
@@ -139,21 +143,28 @@ export default function Home() {
     if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
   }, []);
 
-  // Open the centred "Listening…" overlay and start a 30s capture window with a
-  // live countdown. Both mics use this so the screen is fully blocked while the
-  // mic captures speech (Bug #3/#5 + dual-mic prototype).
-  const beginListening = (mic: "describe" | "edit", onExpire: () => void) => {
+  // On mic tap: prepare capture state, but do NOT show the overlay yet. The
+  // overlay is only opened once the browser confirms recognition is running
+  // (handleListeningStarted, fired from the hook's onStart) — Bug #11.
+  const prepareListening = (mic: "describe" | "edit") => {
     finalsRef.current = "";
     cancelledRef.current = false;
     activeMicRef.current = mic;
     setLiveTranscript("");
+  };
+
+  // Fired from the hook's onStart once recognition.start() is confirmed running.
+  // Opens the centred "Listening…" overlay and starts the 30s capture window with
+  // a live countdown (Bug #3/#5 + Bug #11).
+  const handleListeningStarted = (mic: "describe" | "edit") => {
+    startingRef.current = false; // session confirmed running
     setSecondsLeft(LISTEN_WINDOW_SECONDS);
     setListeningMic(mic);
     clearListenTimers();
     countdownRef.current = setInterval(() => {
       setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
     }, 1000);
-    listenTimerRef.current = setTimeout(onExpire, LISTEN_WINDOW_SECONDS * 1000);
+    listenTimerRef.current = setTimeout(() => stopActiveListening(), LISTEN_WINDOW_SECONDS * 1000);
   };
 
   // Accumulate finalized chunks; show finals + the current interim live.
@@ -216,12 +227,14 @@ export default function Home() {
 
   const {
     isListening: descListening,
-    toggleListening: toggleDescListening,
+    startListening: startDescRecognition,
     stopListening: stopDescListening,
+    forceClean: forceCleanDesc,
     supported: speechSupported,
   } = useSpeechRecognition({
     continuous: true,
     onResult: updateTranscript,
+    onStart: () => handleListeningStarted("describe"),
     onEnd: () => finishDescribe(),
     onError: (e) => speechErrorRef.current(e),
   });
@@ -230,6 +243,7 @@ export default function Home() {
   // separate explicit step (the "Generate" button).
   const finishDescribe = () => {
     clearListenTimers();
+    startingRef.current = false;
     setListeningMic(null);
     const text = finalsRef.current.trim();
     finalsRef.current = "";
@@ -284,11 +298,13 @@ export default function Home() {
 
   const {
     isListening: formListening,
-    toggleListening: toggleFormListening,
+    startListening: startEditRecognition,
     stopListening: stopFormListening,
+    forceClean: forceCleanForm,
   } = useSpeechRecognition({
     continuous: true,
     onResult: updateTranscript,
+    onStart: () => handleListeningStarted("edit"),
     onEnd: () => finishEdit(),
     onError: (e) => speechErrorRef.current(e),
   });
@@ -296,6 +312,7 @@ export default function Home() {
   // Mic 2 — once capture ends, apply the spoken command to the quote.
   const finishEdit = () => {
     clearListenTimers();
+    startingRef.current = false;
     setListeningMic(null);
     const command = finalsRef.current.trim();
     finalsRef.current = "";
@@ -312,9 +329,14 @@ export default function Home() {
       toast.error("Speech recognition is not supported in your browser.");
       return;
     }
-    if (overlayOpen) return;
-    beginListening("describe", () => stopDescListening());
-    toggleDescListening();
+    if (overlayOpen || startingRef.current) return;
+    // Prepare state, then start a FRESH recogniser. The overlay opens from
+    // onStart once the session is confirmed running (Bug #11). The lock + cleaning
+    // the other mic guarantee only one recogniser can ever be active.
+    startingRef.current = true;
+    forceCleanForm();
+    prepareListening("describe");
+    startDescRecognition();
   };
 
   const startEditListening = () => {
@@ -322,9 +344,17 @@ export default function Home() {
       toast.error("Speech recognition is not supported in your browser.");
       return;
     }
-    if (overlayOpen) return;
-    beginListening("edit", () => stopFormListening());
-    toggleFormListening();
+    if (overlayOpen || startingRef.current) return;
+    startingRef.current = true;
+    forceCleanDesc();
+    prepareListening("edit");
+    startEditRecognition();
+  };
+
+  // Stop whichever mic is currently active (used by the 30s window expiry).
+  const stopActiveListening = () => {
+    if (activeMicRef.current === "describe") stopDescListening();
+    else if (activeMicRef.current === "edit") stopFormListening();
   };
 
   const handleVoiceStop = () => {
@@ -343,8 +373,11 @@ export default function Home() {
   const resetVoiceSession = () => {
     clearListenTimers();
     releaseWakeLock();
-    stopDescListening();
-    stopFormListening();
+    startingRef.current = false;
+    // Hard teardown: discard any stale/dead recogniser so the next mic tap builds
+    // a fresh one (Bug #11). stop() alone can leave a dead instance behind.
+    forceCleanDesc();
+    forceCleanForm();
     setListeningMic(null);
     setLiveTranscript("");
     finalsRef.current = "";
@@ -372,6 +405,11 @@ export default function Home() {
         "Microphone access denied. Please allow microphone access in your browser settings and try again.",
         { action: { label: "Retry", onClick: () => retryListening() } }
       );
+    } else if (error === "start-failed") {
+      // Bug #11 — recognition.start() threw; the overlay was never shown.
+      toast.error("Couldn't start the microphone. Please try again.", {
+        action: { label: "Retry", onClick: () => retryListening() },
+      });
     }
   };
 
@@ -506,9 +544,11 @@ export default function Home() {
           cancelledRef.current = true; // discard any half-captured command
         }
       } else if (interruptedRef.current) {
+        // Bug #11 — force-clean the stale recogniser, reset listening state, and
+        // tell the user to start again. We never auto-restart listening.
         interruptedRef.current = false;
         resetVoiceSession();
-        toast("Voice session interrupted. Please tap the microphone to try again.");
+        toast("Voice session interrupted. Tap the microphone to start again.");
       } else if (overlayOpen) {
         requestWakeLock();
       }
