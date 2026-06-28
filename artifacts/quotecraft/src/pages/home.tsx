@@ -809,33 +809,27 @@ export default function Home() {
       </div>
 
       {hasParsed && (
-        <div className="fixed bottom-20 right-4 z-50 flex flex-col items-center gap-2">
-          <span className={cn(
-            "text-[10px] px-2 py-1 rounded-full font-medium shadow-md",
-            formListening ? "bg-destructive text-white animate-pulse" : "bg-primary text-primary-foreground"
-          )}>
-            {formListening ? "Listening..." : "Edit quote"}
-          </span>
+        <div className="fixed bottom-20 right-4 z-50">
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  size="icon"
                   aria-label="Edit your quote by voice"
                   className={cn(
-                    "h-14 w-14 rounded-full shadow-2xl transition-all",
-                    formListening ? "bg-destructive hover:bg-destructive shadow-destructive/40" : "bg-primary hover:bg-primary/90 shadow-primary/40"
+                    "relative h-14 rounded-full px-5 shadow-2xl transition-all flex items-center gap-2",
+                    formListening
+                      ? "bg-destructive hover:bg-destructive shadow-destructive/40"
+                      : "bg-primary hover:bg-primary/90 shadow-primary/40"
                   )}
                   onClick={startEditListening}
                 >
-                  {formListening ? (
-                    <>
-                      <span className="absolute inset-0 rounded-full border-2 border-destructive animate-ping" />
-                      <Mic className="w-6 h-6 animate-pulse text-white" />
-                    </>
-                  ) : (
-                    <Mic className="w-6 h-6 text-white" />
+                  {formListening && (
+                    <span className="absolute inset-0 rounded-full border-2 border-destructive animate-ping" />
                   )}
+                  <Mic className={cn("w-6 h-6 text-white", formListening && "animate-pulse")} />
+                  <span className="text-sm font-semibold text-white whitespace-nowrap">
+                    {formListening ? "Listening..." : "Edit Quote"}
+                  </span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="left">Speak to make changes to quantity, unit price or even the quote structure.</TooltipContent>
