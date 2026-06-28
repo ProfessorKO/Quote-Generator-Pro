@@ -142,8 +142,8 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - When the user requests a PDF, show a frontend form with:
   - **Logo upload** (optional, top-left corner of PDF)
   - **Contact name** (mandatory)
-  - **Mobile** (pre-populated from registration — see dependency §6)
-  - **Email** (pre-populated from registration — see dependency §6)
+  - **Mobile** (pre-populated from saved business profile — see dependency §6)
+  - **Email** (pre-populated from the Clerk account / business profile)
   - **ABN** (optional; if present, show in PDF header)
   - **ACN** (optional; if present, show in PDF header)
 - Generated PDF includes all quote details, GST breakdown, and footer:
@@ -151,25 +151,80 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - **Acceptance:** PDF renders all fields, GST, optional logo/ABN/ACN, and the
   footer message.
 
-### Enhancement #5 — User registration with mobile & email verification
-- **Fields:** full name, email, mobile (Australian format `04XX XXX XXX`),
-  password (min 8 chars, must include a number and a letter).
-- **Dual verification:** send a **6-digit OTP** to **both** email and mobile;
-  **both must be verified** before access is granted.
-- **SMS:** via Twilio (external account + per-message cost — see §7).
-- **Rate limiting:** 3 attempts per 15 minutes.
-- **OTP expiry:** 10 minutes.
-- **Auto-submit** when 6 digits are entered.
-- **Clear error messages** for duplicates, invalid format, expired/incorrect OTP.
-- **Passwords hashed with bcrypt; sessions via JWT.**
+### Enhancement #5 — User registration with email verification (Clerk)
+- **Auth provider:** **Replit-managed Clerk**. Email + password sign-up with
+  **email verification** only. **No mobile/SMS verification** (removed) — **no
+  Twilio**. SSO (Google/Apple/etc.) can be enabled later if desired.
+- **Fields:** full name, business name, email, password (Clerk password policy,
+  min 8 chars).
+- **Email verification:** a **6-digit OTP** is emailed at sign-up and **must be
+  verified** before access is granted.
+- **OTP expiry:** **10 minutes** (Clerk default). This expiry **must be clearly
+  stated in the verification email** (see *Email Templates & Sender* below).
+- **Resend cooldown:** short timer (~30–60s) before "Resend code" re-enables —
+  this is **separate** from the 10-minute code expiry.
+- **Rate limiting / bot protection:** handled by Clerk.
+- **Passwords:** managed and hashed by **Clerk** — the app never stores or
+  handles raw passwords (no custom bcrypt). **Sessions/tokens** are Clerk-managed
+  (no custom JWT needed).
 - **Marketing-consent checkbox** (unticked by default) captured at registration
-  for future promotions (see §8 compliance).
+  for future promotions; stored in your PostgreSQL or Clerk metadata (see §8).
 - **Post-verification:** show a **welcome screen** with a **dashboard**
   displaying the user's **saved templates** and **quote history**.
   - *Note:* quote history is **net-new persistence** — requires a new table and
     save-on-create wiring.
-- **Acceptance:** A user cannot access the app until both channels are verified;
-  rate limits and expiry enforced; passwords never stored in plain text.
+- **Acceptance:** A user cannot access the app until their email is verified; the
+  code expiry is enforced **and clearly stated in the email**; passwords are
+  never handled by the app.
+
+### Email Templates & Sender (Clerk)
+
+**Where are the verification / welcome emails sent from?**
+Auth emails are sent by **Clerk's email service** — the app does **not** run its
+own SMTP or a separate vendor (SendGrid/Resend) for these.
+- **Default (dev + launch):** From name **"QuoteCraft"** via Clerk's shared
+  sending domain (a Clerk-hosted address). No setup required.
+- **Branded (recommended for production):** add a **custom email domain** in
+  Clerk and configure DNS (**DKIM / SPF / CNAME**) so emails send from your own
+  domain, e.g. `noreply@quotecraft.com.au`. Requires owning the domain.
+- **Editing:** these templates are configured in **Clerk's dashboard email
+  template editor**. The copy below is what to paste in; `{{...}}` are Clerk
+  template variables (exact names are confirmed in the editor).
+
+**1) Email verification (code) — sent at sign-up**
+
+> **Subject:** Your QuoteCraft verification code
+>
+> Hi {{user.first_name}},
+>
+> Welcome to QuoteCraft. Enter this code to verify your email address:
+>
+> **{{otp_code}}**
+>
+> **This code expires in 10 minutes.** If it expires, request a new one from the
+> app.
+>
+> If you didn't try to sign up, you can safely ignore this email.
+>
+> — The QuoteCraft Team
+
+**2) Welcome email — sent after the email is verified**
+
+> **Subject:** Welcome to QuoteCraft
+>
+> Hi {{user.first_name}},
+>
+> Your QuoteCraft account is ready. You can now:
+>
+> - Create professional quotes by voice or text
+> - Save reusable templates for jobs you do often
+> - Export branded PDF quotes to send straight to clients
+>
+> **[ Open QuoteCraft ]** → {{app_url}}
+>
+> Need a hand getting started? Just reply to this email.
+>
+> — The QuoteCraft Team
 
 ---
 
@@ -191,16 +246,17 @@ repeatedly.
 - Enhancement #1 + #4 (loading & performance)
 - **Why together:** independent, low-risk, no auth dependency.
 
-### 🟨 Iteration 3 — User Registration & Auth
-- Enhancement #5 (registration, dual OTP, bcrypt, JWT, dashboard)
+### 🟨 Iteration 3 — User Registration & Auth (Clerk)
+- Enhancement #5 (Clerk email/password + email-OTP verification, dashboard)
 - Marketing-consent checkbox
-- **Best phased internally:** (a) core auth + email OTP → (b) Twilio SMS + dual
-  verification + rate limiting → (c) welcome/dashboard + quote-history
-  persistence.
+- Configure Clerk email templates (verification + welcome) incl. the **10-minute
+  expiry** note; *(optional, production)* custom email domain for a branded sender
+- **Best phased internally:** (a) Clerk auth + email verification → (b)
+  welcome/dashboard + quote-history persistence.
 
 ### 🟧 Iteration 4 — Branded PDF Export
 - Enhancement #2
-- **Why last:** mobile/email fields pre-populate from registration (Iteration 3).
+- **Why last:** business-profile fields pre-populate from registration (Iteration 3).
   *Optional compression:* if manual entry is acceptable, this can fold into
   Iteration 2, reducing the plan to **3 iterations**.
 
@@ -214,27 +270,29 @@ repeatedly.
 
 ## 7. Data Storage & Architecture
 
-Two auth paths are possible. Given the **mobile/SMS requirement** (not supported
-by Replit's managed Clerk auth), client contact data will reside in **your own
-database** in either path.
+Auth is handled by **Replit-managed Clerk** (email + password with email
+verification). Clerk stores identity/auth data; your **PostgreSQL** stores all
+app data and the business-profile fields used on quotes/PDFs.
 
-| Data | Custom build (Twilio) | Hybrid (Clerk + Twilio) |
-|------|----------------------|--------------------------|
-| Full name | Your PostgreSQL | Clerk |
-| Email + email verification | Your PostgreSQL | Clerk |
-| Password (hashed, bcrypt) | Your PostgreSQL | Clerk (you never handle it) |
-| **Mobile number** | Your PostgreSQL | **Your PostgreSQL** (Clerk can't store it) |
-| Mobile OTP + status | Your PostgreSQL | Your PostgreSQL |
-| Templates & quote history | Your PostgreSQL | Your PostgreSQL |
+| Data | Where it lives |
+|------|----------------|
+| Full name, email, email verification | Clerk |
+| Password (hashed) | Clerk — app never handles it |
+| Session / tokens | Clerk |
+| Marketing-consent flag | Your PostgreSQL (or Clerk metadata) |
+| Business profile (business name, ABN, address, **phone**, logo) for branding | Your PostgreSQL |
+| Templates & quote history | Your PostgreSQL |
 
 - **Development** and **production** use **separate databases** automatically.
 - **Production** is queryable **read-only** via SQL (SELECT) for support/analytics.
-- You retain **full visibility and access** to client data (names, emails,
-  mobiles) — usable for future promotions, subject to §8.
+- You retain access to user **names/emails** (via the Clerk dashboard/API) and
+  all app data — usable for future promotions, subject to §8.
 
 ### External services required for Iteration 3/4
-- **Twilio** — SMS OTP (account, AU sender registration, per-SMS cost).
-- **Email sender** (e.g. SendGrid/Resend) — email OTP delivery.
+- **Clerk** (Replit-managed) — auth **and** delivery of verification/welcome
+  emails. No separate email vendor is required for auth emails. *(Optional)*
+  custom email domain + DNS for a branded sender.
+- *(Twilio / SMS is no longer required — mobile verification was removed.)*
 
 ---
 
@@ -267,11 +325,14 @@ database** in either path.
 
 ## 10. Open Questions for Sign-off
 
-1. **Auth path:** full custom build, or **hybrid** (managed Clerk for
-   email/password/sessions + Twilio for mobile OTP)? Hybrid reduces
-   security-sensitive code.
-2. **PDF timing:** keep PDF as Iteration 4 (pre-populated from registration), or
-   compress into Iteration 2 with manual entry (→ 3 iterations total)?
-3. **Email provider** preference for OTP delivery?
+1. ~~**Auth path**~~ — **Resolved:** Replit-managed **Clerk**, **email
+   verification only** (no mobile/SMS).
+2. **PDF timing:** keep PDF as Iteration 4 (pre-populated from saved business
+   profile), or compress into Iteration 2 with manual entry (→ 3 iterations total)?
+3. ~~**Email provider for OTP**~~ — **Resolved:** handled by **Clerk** (optional
+   custom email domain for a branded sender in production).
 4. **Quote history:** confirm quotes should be persisted per user (new storage)
    for the dashboard.
+5. **Branded sender:** do you own a domain (e.g. `quotecraft.com.au`) you'd like
+   verification/welcome emails sent from, or is the default Clerk sender fine for
+   now?
