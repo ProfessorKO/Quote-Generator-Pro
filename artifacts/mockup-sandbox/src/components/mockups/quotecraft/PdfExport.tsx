@@ -33,9 +33,9 @@ export function PdfExport() {
   });
 
   const [mobile, setMobile] = useState("");
-  const mobileValid = mobile.length === 10 && mobile.startsWith("04");
+  const mobileValid = mobile.length === 8;
   const formatMobile = (m: string) =>
-    m.length === 10 ? `${m.slice(0, 4)} ${m.slice(4, 7)} ${m.slice(7)}` : m;
+    m.length === 8 ? `4 ${m.slice(0, 4)} ${m.slice(4)}` : m;
 
   const handleDetailChange = (field: keyof typeof businessDetails, value: string) => {
     setBusinessDetails(prev => ({ ...prev, [field]: value }));
@@ -73,7 +73,7 @@ export function PdfExport() {
                       <div className="font-bold text-[10px] text-primary">{businessDetails.name}</div>
                       <div className="text-muted-foreground">ABN: {businessDetails.abn}</div>
                       <div className="text-muted-foreground">{businessDetails.address}</div>
-                      {mobileValid && <div className="text-muted-foreground">{formatMobile(mobile)}</div>}
+                      {mobileValid && <div className="text-muted-foreground">+61 {formatMobile(mobile)}</div>}
                       <div className="text-muted-foreground">{businessDetails.email}</div>
                     </div>
                   </div>
@@ -216,22 +216,22 @@ export function PdfExport() {
                       </Label>
                       <div className="flex">
                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-border bg-muted text-sm font-medium text-muted-foreground select-none">
-                          +61
+                          +61 4
                         </span>
                         <Input
                           id="biz-mobile"
                           inputMode="numeric"
-                          maxLength={10}
+                          maxLength={8}
                           value={mobile}
                           onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
                           className={`rounded-l-none ${mobile && !mobileValid ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                          placeholder="04XX XXX XXX"
+                          placeholder="XXXX XXXX"
                         />
                       </div>
                       {mobile && !mobileValid ? (
-                        <p className="text-xs text-red-600">Must be 10 digits starting with 04.</p>
+                        <p className="text-xs text-red-600">Enter the 8 digits after +61 4.</p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Optional · 10 digits, must start with 04</p>
+                        <p className="text-xs text-muted-foreground">Optional · 8 digits after +61 4</p>
                       )}
                     </div>
                   </div>
