@@ -6,3 +6,9 @@ id = "Gj4wtaLsRZmCoGki-mK0s"
 uri = "file://docs/QuoteCraft-Requirements.md"
 type = "text"
 title = "QuoteCraft — Consolidated Requirements Document"
+
+[[outputs]]
+id = "Vq9HPPJB8z5msSW8Hllpr"
+uri = "file://docs/QuoteCraft-Requirements-v4.0.md"
+type = "text"
+title = "QuoteCraft Requirements v4.0 (as-built)"
