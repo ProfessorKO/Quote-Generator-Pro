@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import { db, templatesTable } from "@workspace/db";
 import {
   CreateTemplateBody,
@@ -31,17 +31,35 @@ router.post("/templates", async (req, res): Promise<void> => {
     return;
   }
 
-  const [template] = await db
-    .insert(templatesTable)
-    .values({
-      name: parsed.data.name,
-      businessDescription: parsed.data.businessDescription,
-      lineItems: parsed.data.lineItems as any,
-      settings: parsed.data.settings as any,
-    })
-    .returning();
+  const name = parsed.data.name.trim();
 
-  res.status(201).json(GetTemplateResponse.parse(template));
+  const duplicate = await db
+    .select({ id: templatesTable.id })
+    .from(templatesTable)
+    .where(sql`lower(${templatesTable.name}) = lower(${name})`);
+  if (duplicate.length > 0) {
+    res.status(409).json({ error: "A template with this name already exists" });
+    return;
+  }
+
+  try {
+    const [template] = await db
+      .insert(templatesTable)
+      .values({
+        name,
+        businessDescription: parsed.data.businessDescription,
+        lineItems: parsed.data.lineItems as any,
+        settings: parsed.data.settings as any,
+      })
+      .returning();
+    res.status(201).json(GetTemplateResponse.parse(template));
+  } catch (err) {
+    if ((err as { code?: string })?.code === "23505") {
+      res.status(409).json({ error: "A template with this name already exists" });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.get("/templates/:id", async (req, res): Promise<void> => {
@@ -78,24 +96,48 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [template] = await db
-    .update(templatesTable)
-    .set({
-      name: parsed.data.name,
-      businessDescription: parsed.data.businessDescription,
-      lineItems: parsed.data.lineItems as any,
-      settings: parsed.data.settings as any,
-      updatedAt: new Date(),
-    })
-    .where(eq(templatesTable.id, params.data.id))
-    .returning();
+  const name = parsed.data.name.trim();
 
-  if (!template) {
-    res.status(404).json({ error: "Template not found" });
+  const duplicate = await db
+    .select({ id: templatesTable.id })
+    .from(templatesTable)
+    .where(
+      and(
+        sql`lower(${templatesTable.name}) = lower(${name})`,
+        ne(templatesTable.id, params.data.id),
+      ),
+    );
+  if (duplicate.length > 0) {
+    res.status(409).json({ error: "A template with this name already exists" });
     return;
   }
 
-  res.json(UpdateTemplateResponse.parse(template));
+  try {
+    const [template] = await db
+      .update(templatesTable)
+      .set({
+        name,
+        businessDescription: parsed.data.businessDescription,
+        lineItems: parsed.data.lineItems as any,
+        settings: parsed.data.settings as any,
+        updatedAt: new Date(),
+      })
+      .where(eq(templatesTable.id, params.data.id))
+      .returning();
+
+    if (!template) {
+      res.status(404).json({ error: "Template not found" });
+      return;
+    }
+
+    res.json(UpdateTemplateResponse.parse(template));
+  } catch (err) {
+    if ((err as { code?: string })?.code === "23505") {
+      res.status(409).json({ error: "A template with this name already exists" });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.delete("/templates/:id", async (req, res): Promise<void> => {

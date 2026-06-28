@@ -1,8 +1,34 @@
 # QuoteCraft — Consolidated Requirements Document
 
-**Version:** 1.0
-**Date:** 25 June 2026
+**Version:** 3.0
+**Date:** 28 June 2026
 **Status:** Draft for build sign-off
+
+---
+
+## Document Versioning & Change Tracking
+
+This is a **single living document**. The filename carries the current version
+(`QuoteCraft-Requirements-v3.0.md`) and is renamed on each version bump. The
+**Changelog** below records what changed per version, and changes are marked
+**inline** so the full decision history stays visible.
+
+### Legend (tracked changes)
+
+| Notation | Meaning |
+|----------|---------|
+| <mark>highlighted text</mark> | **Added or changed** in the current version (v3.0). |
+| ~~struck-through text~~ | **Removed** in the noted revision — kept visible for history, not active. |
+| *(removed vX.0)* | Tag after struck text saying which version dropped it. |
+| *(new v3.0)* / *(changed v3.0)* | Tag marking current-version additions/edits. |
+
+### Changelog
+
+| Version | Date | Summary |
+|---------|------|---------|
+| **v1.0** | 25 Jun 2026 | Initial consolidated spec — all bugs + enhancements, **two-mic** model, Australian tax rules (10% GST, call-out fee, public-holiday surcharge), template save/load, build iterations. |
+| **v2.0** | 27 Jun 2026 | **Auth pivot:** adopted **Replit-managed Clerk** with **email verification only**. ~~Removed mobile/SMS verification, Twilio, and dual (email+SMS) verification.~~ Added *Email Templates & Sender* section (verification + welcome emails, 10-min OTP expiry, default vs branded custom-domain sender). |
+| **v3.0** | 28 Jun 2026 | **Try-before-register access model** (§2A): anonymous users can generate quotes; registration is gated **only** at Save / Download / Email. Registration now captures **business name, ABN, address** to pre-populate the PDF. **PDF mobile field** changed to a fixed **`+61 4`** prefix + **8 digits**. ~~Removed the PDF "phone" field~~ and ~~the earlier `+61` + 10-digit-starting-`04` mobile rule~~. Added an **AU address-lookup** future-enhancement note. Introduced this versioning + change-tracking system. |
 
 ---
 
@@ -17,9 +43,9 @@ This document consolidates all reported bugs and requested enhancements into a
 single specification, groups them into the **minimum number of build
 iterations**, and defines the **expected UI** for each.
 
-> **Key decision (this revision):** The app **keeps TWO microphone icons** — one
-> for *initial quote generation*l and one for *making changes to an existing
-> quote*. They are intentional and distinct, **not** duplicates to be merged.
+> **Key decision:** The app **keeps TWO microphone icons** — one for *initial
+> quote generation* and one for *making changes to an existing quote*. They are
+> intentional and distinct, **not** duplicates to be merged.
 
 ---
 
@@ -38,21 +64,23 @@ iterations**, and defines the **expected UI** for each.
 
 ---
 
-## 2A. Access & Gating Model *(revised)*
+## 2A. Access & Gating Model *(new v2.0 · refined v3.0)*
 
 QuoteCraft is **try-before-you-register**:
 
 - **Anonymous use (no account):** A first-time / unregistered user **can generate
   an initial quote by voice or text** (Mic 1) and see the calculated result.
   Quoting is **free and ungated**.
+- ~~Registration gates access to the app from the start (users must sign up before
+  generating any quote).~~ *(removed v3.0 — replaced by try-before-register above)*
 - **Registration gate:** An account (**Clerk, email-verified**) is required the
   moment the user clicks **Save**, **Download PDF**, or **Email to client**.
   These actions are blocked until the user registers/logs in and verifies email.
 - **Why:** capture the lead and business profile exactly when the user gets value
   (a finished quote they want to keep or send).
-- **Registration captures the business profile** — **business name, ABN, address**
-  (plus full name + email) — which **pre-populate the PDF** so exports are branded
-  without re-typing.
+- <mark>**Registration captures the business profile** — **business name, ABN,
+  address** (plus full name + email) — which **pre-populate the PDF** so exports
+  are branded without re-typing.</mark> *(new v3.0)*
 - After registering, the user is **returned to complete the action they tried**
   (save/download/email) without losing the in-progress quote.
 
@@ -85,7 +113,9 @@ distinct placement, and its own label/tooltip so users never confuse them.
 
 > Both mics share the same visual language (pulse when listening, spoken
 > confirmation, screen lock during processing) but remain **two separate
-> controls** with distinct purposes.
+> controls** with distinct purposes. ~~Earlier request: merge the two mics into a
+> single microphone.~~ *(removed v1.0 — superseded by the two-distinct-mics
+> decision; see Bug #4.)*
 
 ---
 
@@ -114,9 +144,10 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - Implemented as part of the screen-lock behaviour in Bug #5.
 
 ### Bug #4 — Microphone clarity *(REVISED — do NOT merge to one mic)*
-- **Original request superseded.** Instead of removing a mic, ensure the **two
-  mics are visually and functionally distinct** (separate placement, labels,
-  tooltips per §3) so neither looks like an accidental duplicate.
+- **Original request superseded.** ~~Remove one microphone so the screen shows a
+  single mic.~~ *(removed v1.0)* Instead of removing a mic, ensure the **two mics
+  are visually and functionally distinct** (separate placement, labels, tooltips
+  per §3) so neither looks like an accidental duplicate.
 - **Acceptance:** A first-time user can tell which mic creates a quote vs. which
   edits it, without instruction.
 
@@ -164,10 +195,15 @@ distinct placement, and its own label/tooltip so users never confuse them.
 - When the user requests a PDF, show a frontend form with:
   - **Logo upload** (optional, top-left corner of PDF)
   - **Contact name** (mandatory)
-  - **Mobile** *(optional)* — **frontend-validated**: a fixed **`+61`** prefix is
-    shown on the leading edge of the field; the user types the remaining
-    **10 digits**, which **must start with `04`**. If blank, it is omitted from
-    the PDF; if entered, it must pass validation before export.
+  - ~~**Phone** field shown in the PDF header.~~ *(removed v3.0)*
+  - ~~**Mobile** *(optional)* — a fixed **`+61`** prefix is shown; the user types
+    the remaining **10 digits**, which **must start with `04`**.~~ *(removed
+    v3.0 — replaced below)*
+  - <mark>**Mobile** *(optional)* — **frontend-validated**: a fixed **`+61 4`**
+    prefix is shown on the leading edge of the field; the user types **only the
+    remaining 8 digits**. Displayed/exported as `+61 4 XXXX XXXX`. If blank, it is
+    omitted from the PDF; if entered, all 8 digits must be present before export.</mark>
+    *(changed v3.0)*
   - **ABN** (optional override; if present, show in PDF header)
   - **ACN** (optional; if present, show in PDF header)
 - Generated PDF includes all quote details, GST breakdown, and footer:
@@ -177,8 +213,9 @@ distinct placement, and its own label/tooltip so users never confuse them.
 
 ### Enhancement #5 — User registration with email verification (Clerk)
 - **Auth provider:** **Replit-managed Clerk**. Email + password sign-up with
-  **email verification** only. **No mobile/SMS verification** (removed) — **no
-  Twilio**. SSO (Google/Apple/etc.) can be enabled later if desired.
+  **email verification** only. ~~Mobile/SMS verification via Twilio.~~ *(removed
+  v2.0 — no Twilio.)* ~~Dual verification (email **and** SMS).~~ *(removed v2.0.)*
+  SSO (Google/Apple/etc.) can be enabled later if desired.
 - **Fields:** full name, **business name, ABN, address** (these pre-populate the
   PDF), email, password (Clerk password policy, min 8 chars).
 - **Email verification:** a **6-digit OTP** is emailed at sign-up and **must be
@@ -203,7 +240,25 @@ distinct placement, and its own label/tooltip so users never confuse them.
   action they triggered; code expiry is enforced **and stated in the email**;
   passwords are never handled by the app.
 
-### Email Templates & Sender (Clerk)
+### Enhancement #6 — Australian address lookup/autocomplete <mark>*(new v3.0 — future option, not in current build)*</mark>
+
+<mark>There is **no native/built-in** Australian address-validation API in the
+platform, and AI models (OpenAI/Gemini/Anthropic) can *format* an address but
+**cannot authoritatively validate** it against the Australia Post database (risk
+of plausible-but-fake addresses). Real autocomplete/validation requires an
+**external service with an API key**:</mark>
+
+- <mark>**Australia Post APIs** / **Addressify** — built on the official AusPost
+  PAF dataset (most "Australian-correct").</mark>
+- <mark>**Google Places Autocomplete** — global, fast, common for type-ahead.</mark>
+- <mark>**Loqate / Melissa** — enterprise-grade global validation.</mark>
+
+<mark>**Recommendation:** Google Places Autocomplete for the typing experience, or
+Addressify for AusPost-verified data. Deferred — to be scheduled as its own
+iteration if/when address verification is required for the registration address
+and PDF header.</mark>
+
+### Email Templates & Sender (Clerk) *(new v2.0)*
 
 **Where are the verification / welcome emails sent from?**
 Auth emails are sent by **Clerk's email service** — the app does **not** run its
@@ -291,6 +346,8 @@ repeatedly.
   until then).
 - **Enh #2** pre-population depends on Iteration 3.
 - **Quote history** (dashboard) is new persistence introduced in Iteration 3.
+- <mark>**Enh #6** (address lookup) is independent and deferred; can be scheduled
+  any time after Iteration 3.</mark> *(new v3.0)*
 
 ---
 
@@ -306,8 +363,8 @@ app data and the business-profile fields used on quotes/PDFs.
 | Password (hashed) | Clerk — app never handles it |
 | Session / tokens | Clerk |
 | Marketing-consent flag | Your PostgreSQL (or Clerk metadata) |
-| Business profile (business name, ABN, address, logo) for branding | Your PostgreSQL |
-| Mobile — **optional**, entered per PDF export (not part of registration) | Your PostgreSQL (only if provided) |
+| ~~Business profile incl. **phone**~~ → Business profile (business name, ABN, address, logo) for branding | Your PostgreSQL |
+| <mark>Mobile — **optional**, entered per PDF export (not part of registration)</mark> | Your PostgreSQL (only if provided) |
 | Templates & quote history | Your PostgreSQL |
 
 - **Development** and **production** use **separate databases** automatically.
@@ -319,7 +376,11 @@ app data and the business-profile fields used on quotes/PDFs.
 - **Clerk** (Replit-managed) — auth **and** delivery of verification/welcome
   emails. No separate email vendor is required for auth emails. *(Optional)*
   custom email domain + DNS for a branded sender.
-- *(Twilio / SMS is no longer required — mobile verification was removed.)*
+- ~~**Twilio / SMS** for mobile verification.~~ *(removed v2.0 — mobile
+  verification was dropped.)*
+- <mark>*(Optional, Enh #6)* an address-lookup provider (Google Places / Addressify
+  / Australia Post) — only if address autocomplete/validation is scheduled.</mark>
+  *(new v3.0)*
 
 ---
 
@@ -347,22 +408,28 @@ app data and the business-profile fields used on quotes/PDFs.
 - Sending the actual promotional campaigns (requires a connected email service;
   separate task).
 - Payment processing / invoicing beyond quote PDF generation.
+- <mark>Address autocomplete/validation (Enh #6) — out of the current build;
+  deferred to a future iteration.</mark> *(new v3.0)*
 
 ---
 
 ## 10. Open Questions for Sign-off
 
-1. ~~**Auth path**~~ — **Resolved:** Replit-managed **Clerk**, **email
+1. ~~**Auth path**~~ — **Resolved (v2.0):** Replit-managed **Clerk**, **email
    verification only** (no mobile/SMS).
 2. **PDF timing:** keep PDF as Iteration 4 (pre-populated from saved business
    profile), or compress into Iteration 2 with manual entry (→ 3 iterations total)?
-3. ~~**Email provider for OTP**~~ — **Resolved:** handled by **Clerk** (optional
-   custom email domain for a branded sender in production).
+3. ~~**Email provider for OTP**~~ — **Resolved (v2.0):** handled by **Clerk**
+   (optional custom email domain for a branded sender in production).
 4. **Quote history:** confirm quotes should be persisted per user (new storage)
    for the dashboard.
 5. **Branded sender:** do you own a domain (e.g. `quotecraft.com.au`) you'd like
    verification/welcome emails sent from, or is the default Clerk sender fine for
    now?
-6. **Mobile format:** spec is `+61` prefix **plus** a 10-digit number starting
-   `04`. Strict E.164 would be `+61 4XX XXX XXX` (drop the leading 0). Confirm you
-   want the literal `+61` + `04…` display, or the standard `+61 4…` form.
+6. ~~**Mobile format:** `+61` prefix **plus** a 10-digit number starting `04`,
+   or strict E.164 `+61 4XX XXX XXX`?~~ — <mark>**Resolved (v3.0):** fixed
+   **`+61 4`** prefix shown in the field; user enters **8 digits**; exported as
+   `+61 4 XXXX XXXX`.</mark>
+7. <mark>**Address lookup (Enh #6):** is verified/auto-completed address entry
+   wanted (needs an external provider + key), or is free-text address sufficient
+   for now?</mark> *(new v3.0)*

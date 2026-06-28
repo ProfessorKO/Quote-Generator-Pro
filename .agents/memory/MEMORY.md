@@ -1,0 +1,2 @@
+- [API server dev workflow rebuilds](api-server-dev-restart.md) — api-server runs a built bundle (build && start), not hot-reload; restart its workflow after editing routes or changes won't apply.
+- [Template name uniqueness](template-name-uniqueness.md) — names are globally unique, case-insensitive, enforced at BOTH app level (trim+lower pre-check → 409) and DB level (unique index on lower(name)); keep both in lockstep.

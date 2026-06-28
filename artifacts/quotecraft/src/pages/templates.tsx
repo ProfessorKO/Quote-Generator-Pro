@@ -1,18 +1,48 @@
+import { useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useListTemplates, useDeleteTemplate, getListTemplatesQueryKey } from "@workspace/api-client-react";
+import { useListTemplates, useDeleteTemplate, getListTemplatesQueryKey, QuoteTemplate } from "@workspace/api-client-react";
 import { Loader2, FileText, Trash2, ChevronRight, PlusCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+const TEMPLATES_CACHE_KEY = "quotecraft.templates.cache";
+
+function readTemplatesCache(): QuoteTemplate[] | undefined {
+  try {
+    const raw = localStorage.getItem(TEMPLATES_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as QuoteTemplate[]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function Templates() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const { data: templates, isLoading } = useListTemplates();
+  const { data: templates, isLoading } = useListTemplates({
+    query: {
+      queryKey: getListTemplatesQueryKey(),
+      // Render the cached list instantly, then refetch fresh data in the
+      // background (initialDataUpdatedAt: 0 marks the cache as stale).
+      initialData: readTemplatesCache(),
+      initialDataUpdatedAt: 0,
+    },
+  });
   const deleteTemplate = useDeleteTemplate();
+
+  useEffect(() => {
+    if (templates) {
+      try {
+        localStorage.setItem(TEMPLATES_CACHE_KEY, JSON.stringify(templates));
+      } catch {
+        // ignore quota / serialization errors
+      }
+    }
+  }, [templates]);
 
   const handleDelete = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();

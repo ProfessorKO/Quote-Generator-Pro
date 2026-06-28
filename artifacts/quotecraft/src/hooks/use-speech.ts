@@ -7,9 +7,11 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 export function useSpeechRecognition({
   onResult,
   onEnd,
+  continuous = false,
 }: {
   onResult?: (transcript: string, isFinal: boolean) => void;
   onEnd?: () => void;
+  continuous?: boolean;
 }) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -32,7 +34,7 @@ export function useSpeechRecognition({
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = continuous;
     recognition.interimResults = true;
     recognition.lang = "en-AU";
 

@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { NumericInput } from "@/components/numeric-input";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
@@ -43,6 +45,48 @@ export default function Home() {
   const [hasParsed, setHasParsed] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
+
+  const [screenLock, setScreenLock] = useState(false);
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = screenLock ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [screenLock]);
+
+  useEffect(() => () => {
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+  }, []);
+
+  const startLock = () => {
+    setScreenLock(true);
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    lockTimerRef.current = setTimeout(() => {
+      setScreenLock(false);
+      toast.error("Voice processing timed out. Please try again.");
+    }, 30000);
+  };
+
+  const endLock = () => {
+    if (lockTimerRef.current) { clearTimeout(lockTimerRef.current); lockTimerRef.current = null; }
+    setScreenLock(false);
+  };
+
+  // Debounced spoken confirmation. The trailing window resets on every
+  // successful edit, so a burst of rapid voice edits collapses into a single
+  // "Quote updated" once the user pauses for ~1.5s. (Toasts still fire per edit.)
+  const speakQuoteUpdated = () => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+    speakTimerRef.current = setTimeout(() => {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("Quote updated");
+      utterance.lang = "en-AU";
+      window.speechSynthesis.speak(utterance);
+    }, 1500);
+  };
 
   const queryClient = useQueryClient();
   const parseQuote = useParseQuoteDescription();
@@ -89,21 +133,25 @@ export default function Home() {
     }
 
     const loadingToast = toast.loading(`Applying: "${command}"`);
+    startLock();
     applyVoiceCommand.mutate(
       { data: { command, lineItems, settings } },
       {
         onSuccess: (data) => {
           toast.dismiss(loadingToast);
+          endLock();
           if (data.understood) {
             setLineItems(data.lineItems);
             setSettings(data.settings);
             toast.success(data.message);
+            speakQuoteUpdated();
           } else {
             toast.error(data.message || "Couldn't understand that command");
           }
         },
         onError: () => {
           toast.dismiss(loadingToast);
+          endLock();
           toast.error("Failed to apply command. Please try again.");
         },
       }
@@ -122,8 +170,13 @@ export default function Home() {
       toast.error("Please describe your quote first");
       return;
     }
+    // Generation is the processing step for Mic 1 (dictation fills this textarea,
+    // then generation runs), so we lock the screen here regardless of whether the
+    // description was typed or spoken — it is the same heavy AI step (Bug #3/#5).
+    startLock();
     parseQuote.mutate({ data: { description } }, {
       onSuccess: (data) => {
+        endLock();
         setLineItems(data.lineItems);
         setSettings(data.settings);
         if (data.businessName) {
@@ -132,6 +185,7 @@ export default function Home() {
         setHasParsed(true);
       },
       onError: (err) => {
+        endLock();
         toast.error("Failed to generate quote. Please try again.");
       }
     });
@@ -182,8 +236,12 @@ export default function Home() {
         setSaveDialogOpen(false);
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
       },
-      onError: () => {
-        toast.error("Failed to save template");
+      onError: (err) => {
+        if ((err as { status?: number })?.status === 409) {
+          toast.error("That template name is already taken. Please choose a different name.");
+        } else {
+          toast.error("Failed to save template");
+        }
       }
     });
   };
@@ -203,15 +261,23 @@ export default function Home() {
               onChange={(e) => setDescription(e.target.value)}
               disabled={parseQuote.isPending}
             />
-            <Button 
-              size="icon" 
-              variant={descListening ? "default" : "secondary"}
-              className={cn("absolute bottom-3 right-3 rounded-full transition-all", descListening && "bg-destructive hover:bg-destructive/90 animate-pulse")}
-              onClick={toggleDescListening}
-              disabled={parseQuote.isPending}
-            >
-              <Mic className="w-4 h-4" />
-            </Button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant={descListening ? "default" : "secondary"}
+                    aria-label="Describe your job out loud to generate a quote"
+                    className={cn("absolute bottom-3 right-3 rounded-full transition-all", descListening && "bg-destructive hover:bg-destructive/90 animate-pulse")}
+                    onClick={toggleDescListening}
+                    disabled={parseQuote.isPending}
+                  >
+                    <Mic className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">Describe your job out loud to generate a quote.</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <Button 
             className="w-full h-12 text-base font-semibold" 
@@ -261,19 +327,17 @@ export default function Home() {
                       <div className="flex gap-4">
                         <div className="space-y-1.5 flex-1">
                           <Label className="text-xs text-muted-foreground">Qty ({item.unit})</Label>
-                          <Input 
-                            type="number" 
-                            value={item.quantity} 
-                            onChange={(e) => handleUpdateItem(item.id, "quantity", parseFloat(e.target.value) || 0)}
+                          <NumericInput
+                            value={item.quantity}
+                            onValueChange={(v) => handleUpdateItem(item.id, "quantity", v)}
                             className="font-mono text-sm h-9"
                           />
                         </div>
                         <div className="space-y-1.5 flex-1">
                           <Label className="text-xs text-muted-foreground">Unit Price ($)</Label>
-                          <Input 
-                            type="number" 
-                            value={item.unitPrice} 
-                            onChange={(e) => handleUpdateItem(item.id, "unitPrice", parseFloat(e.target.value) || 0)}
+                          <NumericInput
+                            value={item.unitPrice}
+                            onValueChange={(v) => handleUpdateItem(item.id, "unitPrice", v)}
                             className="font-mono text-sm h-9"
                           />
                         </div>
@@ -311,11 +375,10 @@ export default function Home() {
                     
                     {settings.hasCallOut && (
                       <div className="pl-0 animate-in slide-in-from-top-2">
-                        <Input 
-                          type="number" 
-                          placeholder="Amount ($)" 
+                        <NumericInput
+                          placeholder="Amount ($)"
                           value={settings.callOutFee}
-                          onChange={(e) => setSettings({...settings, callOutFee: parseFloat(e.target.value) || 0})}
+                          onValueChange={(v) => setSettings({...settings, callOutFee: v})}
                           className="font-mono h-9"
                         />
                       </div>
@@ -335,11 +398,10 @@ export default function Home() {
                     {settings.isPublicHoliday && (
                       <div className="pl-0 animate-in slide-in-from-top-2">
                         <div className="flex items-center gap-2">
-                           <Input 
-                            type="number" 
-                            placeholder="Surcharge %" 
+                           <NumericInput
+                            placeholder="Surcharge %"
                             value={settings.publicHolidaySurchargePercent}
-                            onChange={(e) => setSettings({...settings, publicHolidaySurchargePercent: parseFloat(e.target.value) || 0})}
+                            onValueChange={(v) => setSettings({...settings, publicHolidaySurchargePercent: v})}
                             className="font-mono h-9 w-24"
                           />
                           <span className="text-sm text-muted-foreground">%</span>
@@ -403,28 +465,49 @@ export default function Home() {
 
       {hasParsed && (
         <div className="fixed bottom-20 right-4 z-50 flex flex-col items-center gap-2">
-          {formListening && (
-            <span className="bg-primary text-primary-foreground text-[10px] px-2 py-1 rounded-full font-medium shadow-md animate-pulse">
-              Listening...
-            </span>
-          )}
-          <Button
-            size="icon"
-            className={cn(
-              "h-14 w-14 rounded-full shadow-2xl transition-all",
-              formListening ? "bg-destructive hover:bg-destructive shadow-destructive/40" : "bg-primary hover:bg-primary/90 shadow-primary/40"
-            )}
-            onClick={toggleFormListening}
-          >
-            {formListening ? (
-              <>
-                <span className="absolute inset-0 rounded-full border-2 border-destructive animate-ping" />
-                <Mic className="w-6 h-6 animate-pulse text-white" />
-              </>
-            ) : (
-              <Mic className="w-6 h-6 text-white" />
-            )}
-          </Button>
+          <span className={cn(
+            "text-[10px] px-2 py-1 rounded-full font-medium shadow-md",
+            formListening ? "bg-destructive text-white animate-pulse" : "bg-primary text-primary-foreground"
+          )}>
+            {formListening ? "Listening..." : "Edit quote"}
+          </span>
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  aria-label="Edit your quote by voice"
+                  className={cn(
+                    "h-14 w-14 rounded-full shadow-2xl transition-all",
+                    formListening ? "bg-destructive hover:bg-destructive shadow-destructive/40" : "bg-primary hover:bg-primary/90 shadow-primary/40"
+                  )}
+                  onClick={toggleFormListening}
+                >
+                  {formListening ? (
+                    <>
+                      <span className="absolute inset-0 rounded-full border-2 border-destructive animate-ping" />
+                      <Mic className="w-6 h-6 animate-pulse text-white" />
+                    </>
+                  ) : (
+                    <Mic className="w-6 h-6 text-white" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Speak to make changes to quantity, unit price or even the quote structure.</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+
+      {screenLock && (
+        <div
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background/80 backdrop-blur-sm"
+          role="alertdialog"
+          aria-busy="true"
+          aria-live="assertive"
+        >
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">Processing voice…</p>
         </div>
       )}
 

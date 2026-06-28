@@ -1,20 +1,42 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
-import Templates from "@/pages/templates";
 
-const queryClient = new QueryClient();
+const Home = lazy(() => import("@/pages/home"));
+const Templates = lazy(() => import("@/pages/templates"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+function PageFallback() {
+  return (
+    <div className="flex justify-center items-center h-[60vh]">
+      <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+    </div>
+  );
+}
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/templates" component={Templates} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageFallback />}>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/templates" component={Templates} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
