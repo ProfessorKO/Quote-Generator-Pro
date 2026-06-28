@@ -1,3 +1,5 @@
 - [API server dev workflow rebuilds](api-server-dev-restart.md) — api-server runs a built bundle (build && start), not hot-reload; restart its workflow after editing routes or changes won't apply.
 - [Template name uniqueness](template-name-uniqueness.md) — names are globally unique, case-insensitive, enforced at BOTH app level (trim+lower pre-check → 409) and DB level (unique index on lower(name)); keep both in lockstep.
 - [Voice/mic overlay lifecycle](voice-overlay-lifecycle.md) — a blocking mic overlay must NOT tie teardown to isListening; start() can throw synchronously with no events → screen locks forever. Tear down via onEnd + ungated stop().
+- [API schema codegen](api-schema-codegen.md) — shared types/zod are generated from lib/api-spec/openapi.yaml; edit the spec then run api-spec codegen, never hand-edit generated files. New fields → optional.
+- [Overtime data model](overtime-model.md) — overtimePercent is a % markup on the BASE unitPrice (never baked in); effectiveRate = unitPrice*(1+pct/100); use it for all line totals.

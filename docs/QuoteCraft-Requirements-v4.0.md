@@ -31,7 +31,7 @@ This is a **single living document**. The filename carries the current version
 | **v1.0** | 25 Jun 2026 | Initial consolidated spec — all bugs + enhancements, **two-mic** model, Australian tax rules (10% GST, call-out fee, public-holiday surcharge), template save/load, build iterations. |
 | **v2.0** | 27 Jun 2026 | **Auth pivot:** adopted **Replit-managed Clerk** with **email verification only**. ~~Removed mobile/SMS verification, Twilio, and dual (email+SMS) verification.~~ Added *Email Templates & Sender* section (verification + welcome emails, 10-min OTP expiry, default vs branded custom-domain sender). |
 | **v3.0** | 28 Jun 2026 | **Try-before-register access model** (§2A): anonymous users can generate quotes; registration is gated **only** at Save / Download / Email. Registration now captures **business name, ABN, address** to pre-populate the PDF. **PDF mobile field** changed to a fixed **`+61 4`** prefix + **8 digits**. ~~Removed the PDF "phone" field~~ and ~~the earlier `+61` + 10-digit-starting-`04` mobile rule~~. Added an **AU address-lookup** future-enhancement note. Introduced this versioning + change-tracking system. |
-| **v4.0** | 28 Jun 2026 | **As-built capture:** Iterations 1 & 2 **built and verified** in the running app. Added **§5A As-Built / Deployed Parameters** recording every concrete value shipped — incl. the **spoken-confirmation debounce timer (1500 ms)**, the **voice screen-lock timers (30 s listening/speaking window on mic tap + 30 s processing auto-unlock)**, voice-recognition settings (`continuous=true`, `interimResults=true`, `lang=en-AU`), the **case-insensitive duplicate-name guard** (app pre-check + DB unique index on `lower(name)` + 23505 catch → HTTP 409), and the **React Query / caching parameters** (`staleTime 60 s`, `gcTime 5 min`, `refetchOnWindowFocus=false`, `retry=1`, `localStorage` template cache). Build iterations §6 mark **Iter 1 & 2 as DONE**. |
+| **v4.0** | 28 Jun 2026 | **As-built capture:** Iterations 1 & 2 **built and verified** in the running app. Added **§5A As-Built / Deployed Parameters** recording every concrete value shipped — incl. the **spoken-confirmation debounce timer (1500 ms)**, the **voice screen-lock timers (30 s listening/speaking window on mic tap + 30 s processing auto-unlock)**, voice-recognition settings (`continuous=true`, `interimResults=true`, `lang=en-AU`), the **case-insensitive duplicate-name guard** (app pre-check + DB unique index on `lower(name)` + 23505 catch → HTTP 409), and the **React Query / caching parameters** (`staleTime 60 s`, `gcTime 5 min`, `refetchOnWindowFocus=false`, `retry=1`, `localStorage` template cache). Build iterations §6 mark **Iter 1 & 2 as DONE**. **Ad-hoc bug batch (§4):** added & built **Bug #7** (mic permission-denial freeze → force-teardown + Retry, async *and* sync paths), **Bug #8** (unsaved-quote persistence via `sessionStorage` restore/clear), **Bug #9** (Wake Lock + Page-Visibility interruption handling) and **Bug #10** (**overtime as a percentage markup** on the base `unitPrice` — new optional `overtimePercent` on `QuoteLineItem`, voice set/remove, clamped `>= 0`). |
 
 ---
 
@@ -182,6 +182,52 @@ distinct placement, and its own label/tooltip so users never confuse them.
   different name."*
 - **Acceptance:** Saving a duplicate name is blocked with the exact message and
   the name field is focused/selected.
+
+### Bug #7 — Microphone permission denial freeze <mark>*(new v4.0)*</mark>
+- When the browser **denies microphone access** (`not-allowed` /
+  `service-not-allowed` / `permission-denied`, on either the async `onerror` or
+  the synchronous `start()` throw), the listening overlay must **not** stay stuck.
+- Force-teardown the overlay, release any wake lock, discard partial capture.
+- Show toast *"Microphone access denied. Please allow microphone access in your
+  browser settings and try again."* with a **Retry** action that re-prompts the
+  **last-used** mic.
+- **Acceptance:** Denying the mic dismisses the overlay and shows the message +
+  working Retry; granting then retrying starts a fresh capture.
+
+### Bug #8 — Unsaved quote lost on navigation <mark>*(new v4.0)*</mark>
+- An in-progress quote (description, line items, settings, business name, parsed
+  state) must **survive navigating away** (e.g. to Templates) and back within the
+  session.
+- Persist to `sessionStorage` on change; **restore on return** (skipped when a
+  `templateId` is loading its own data) with toast *"Unsaved quote restored"*.
+- **Clear** the draft on successful save and when the quote becomes empty; a tab
+  close ends the session and discards it automatically.
+- **Acceptance:** Start a quote, switch tabs, return → work is restored; save →
+  draft is cleared.
+
+### Bug #9 — Screen sleep / tab-switch interrupts voice <mark>*(new v4.0)*</mark>
+- While a voice overlay is visible, hold a best-effort **Wake Lock** to stop the
+  screen sleeping (silent no-op where unsupported/denied); re-acquire on return
+  to visibility; release on close.
+- If the page is **hidden while actively listening** (screen lock / tab switch),
+  recognition dies silently — on return, **discard** the partial capture, tear
+  down cleanly and toast *"Voice session interrupted. Please tap the microphone
+  to try again."*
+- **Acceptance:** Locking the screen mid-listen does not apply a garbled command;
+  the user is told to retry.
+
+### Bug #10 — Overtime as a percentage markup <mark>*(new v4.0)*</mark>
+- A line item may carry an **`overtimePercent`** — a percentage **markup on the
+  base `unitPrice`**, never baked into the base rate. Effective rate per unit =
+  `unitPrice + (unitPrice × overtimePercent / 100)`.
+- Totals, the per-line total and the line-item card all use the **effective**
+  rate; the card shows an **Overtime (%)** field plus a *"Base $X + Y% overtime →
+  $Z/unit"* breakdown when overtime is set.
+- Voice: *"overtime 10%"* / *"change overtime to 15%"* sets `overtimePercent`
+  (leaving `unitPrice` untouched); *"remove overtime"* sets it to `0`. The value
+  is clamped `>= 0` on both client and server.
+- **Acceptance:** "overtime 10%" on an $80 base shows $88/unit (not a flat $8);
+  "remove overtime" returns it to the base rate.
 
 ---
 

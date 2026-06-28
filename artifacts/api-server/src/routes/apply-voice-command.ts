@@ -18,6 +18,16 @@ The user speaks a command and you apply it to the CURRENT quote state, then retu
 
 You can:
 - Change a line item's unitPrice, quantity, label, or unit
+- Apply OVERTIME to a line item as a PERCENTAGE MARKUP on its base rate:
+  - "overtimePercent" is a percentage added on top of the base unitPrice. The
+    effective charged rate = unitPrice + (unitPrice * overtimePercent / 100).
+    Example: base unitPrice 80 with overtimePercent 10 charges 88 per unit.
+  - "overtime 10%" / "change overtime to 15%" / "add 20 percent overtime" → set
+    that line item's overtimePercent to the spoken number. DO NOT change unitPrice
+    (unitPrice always stays the BASE rate).
+  - "remove overtime" / "no overtime" → set overtimePercent to 0.
+  - NEVER bake the overtime into unitPrice and NEVER set overtimePercent to a raw
+    dollar amount — it is strictly a percentage.
 - Convert a "fixed" charge to "variable" or vice versa:
   - Variable means priced per unit (e.g. unit "hour" or "metre", quantity adjustable, unitPrice is the per-unit rate)
   - Fixed means a flat charge (set unit to "each", quantity to 1, unitPrice to the flat amount)
@@ -38,7 +48,7 @@ Rules:
 
 Output this exact JSON structure:
 {
-  "lineItems": [ { "id": "...", "label": "...", "description": null, "unit": "...", "unitPrice": 0, "quantity": 1, "voiceKey": "..." } ],
+  "lineItems": [ { "id": "...", "label": "...", "description": null, "unit": "...", "unitPrice": 0, "quantity": 1, "voiceKey": "...", "overtimePercent": 0 } ],
   "settings": { "includeGst": true, "gstRate": 0.10, "callOutFee": 0, "publicHolidaySurchargePercent": 0, "isPublicHoliday": false, "hasCallOut": false },
   "message": "string",
   "understood": true
@@ -104,6 +114,7 @@ Output this exact JSON structure:
       id: item.id || `item-${index + 1}`,
       quantity: clampNumber(item.quantity, 1),
       unitPrice: sanitizeSigned(item.unitPrice, 0),
+      overtimePercent: clampNumber(item.overtimePercent, 0),
       unit: item.unit ?? "each",
       voiceKey: item.voiceKey ?? item.label ?? `item ${index + 1}`,
       description: item.description ?? null,

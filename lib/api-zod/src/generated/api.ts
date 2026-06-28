@@ -31,7 +31,8 @@ export const ListTemplatesResponseItem = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -60,7 +61,8 @@ export const CreateTemplateBody = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -91,7 +93,8 @@ export const GetTemplateResponse = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -123,7 +126,8 @@ export const UpdateTemplateBody = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -146,7 +150,8 @@ export const UpdateTemplateResponse = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -185,7 +190,8 @@ export const ParseQuoteDescriptionResponse = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -210,7 +216,8 @@ export const ApplyVoiceCommandBody = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -230,7 +237,8 @@ export const ApplyVoiceCommandResponse = zod.object({
   "unit": zod.string(),
   "unitPrice": zod.number(),
   "quantity": zod.number(),
-  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity')
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),

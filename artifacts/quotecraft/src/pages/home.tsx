@@ -32,18 +32,41 @@ export default function Home() {
   const searchParams = new URLSearchParams(search);
   const templateId = searchParams.get("templateId");
 
-  const [description, setDescription] = useState("");
-  const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
-  const [settings, setSettings] = useState<QuoteSettings>({
+  const RESTORE_KEY = "quotecraft:unsaved-quote";
+
+  // Bug #8 — restore an in-progress quote when returning to this page (e.g. after
+  // visiting Templates). Skipped when a templateId is present, since that flow
+  // loads its own data. Runs once on mount.
+  const restored = useMemo(() => {
+    if (templateId) return null;
+    try {
+      const raw = sessionStorage.getItem(RESTORE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      const hasContent =
+        (typeof data?.description === "string" && data.description.trim()) ||
+        (Array.isArray(data?.lineItems) && data.lineItems.length > 0);
+      return hasContent ? data : null;
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const DEFAULT_SETTINGS: QuoteSettings = {
     includeGst: true,
     gstRate: 0.10,
     callOutFee: 0,
     publicHolidaySurchargePercent: 0,
     isPublicHoliday: false,
     hasCallOut: false,
-  });
-  const [businessName, setBusinessName] = useState("");
-  const [hasParsed, setHasParsed] = useState(false);
+  };
+
+  const [description, setDescription] = useState<string>(restored?.description ?? "");
+  const [lineItems, setLineItems] = useState<QuoteLineItem[]>(restored?.lineItems ?? []);
+  const [settings, setSettings] = useState<QuoteSettings>(restored?.settings ?? DEFAULT_SETTINGS);
+  const [businessName, setBusinessName] = useState<string>(restored?.businessName ?? "");
+  const [hasParsed, setHasParsed] = useState<boolean>(restored?.hasParsed ?? false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
@@ -60,12 +83,49 @@ export default function Home() {
   const speakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalsRef = useRef("");
   const cancelledRef = useRef(false);
+  const wakeLockRef = useRef<any>(null);
+  const wakeLockWantedRef = useRef(false);
+  const activeMicRef = useRef<"describe" | "edit" | null>(null);
+  const interruptedRef = useRef(false);
+  // Indirection so the recognition hooks can call the latest error handler
+  // without forcing it to be declared before them (avoids use-before-declare).
+  const speechErrorRef = useRef<(error: string) => void>(() => {});
 
   const overlayOpen = listeningMic !== null || processing;
 
   const clearListenTimers = () => {
     if (listenTimerRef.current) { clearTimeout(listenTimerRef.current); listenTimerRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  };
+
+  // Bug #9 — keep the screen awake while a voice overlay is up. Best-effort: a
+  // silent no-op where the Wake Lock API is unavailable or the request is denied.
+  const requestWakeLock = async () => {
+    wakeLockWantedRef.current = true;
+    try {
+      if ("wakeLock" in navigator) {
+        const lock = await (navigator as any).wakeLock.request("screen");
+        // The overlay may have closed while request() was in flight — if the
+        // lock is no longer wanted, release the late-resolving one immediately
+        // so we never re-lock the screen after teardown.
+        if (!wakeLockWantedRef.current) {
+          try { lock.release(); } catch { /* ignore */ }
+          return;
+        }
+        wakeLockRef.current = lock;
+      }
+    } catch {
+      /* fail silently */
+    }
+  };
+
+  const releaseWakeLock = () => {
+    wakeLockWantedRef.current = false;
+    const lock = wakeLockRef.current;
+    wakeLockRef.current = null;
+    if (lock) {
+      try { lock.release(); } catch { /* ignore */ }
+    }
   };
 
   useEffect(() => {
@@ -85,6 +145,7 @@ export default function Home() {
   const beginListening = (mic: "describe" | "edit", onExpire: () => void) => {
     finalsRef.current = "";
     cancelledRef.current = false;
+    activeMicRef.current = mic;
     setLiveTranscript("");
     setSecondsLeft(LISTEN_WINDOW_SECONDS);
     setListeningMic(mic);
@@ -162,6 +223,7 @@ export default function Home() {
     continuous: true,
     onResult: updateTranscript,
     onEnd: () => finishDescribe(),
+    onError: (e) => speechErrorRef.current(e),
   });
 
   // Mic 1 — dictation is captured into the description box; generation is a
@@ -228,6 +290,7 @@ export default function Home() {
     continuous: true,
     onResult: updateTranscript,
     onEnd: () => finishEdit(),
+    onError: (e) => speechErrorRef.current(e),
   });
 
   // Mic 2 — once capture ends, apply the spoken command to the quote.
@@ -275,6 +338,43 @@ export default function Home() {
     else if (listeningMic === "edit") stopFormListening();
   };
 
+  // Centralised teardown shared by error handling (Bug #7) and visibility
+  // interruption (Bug #9). Discards capture and closes any open overlay.
+  const resetVoiceSession = () => {
+    clearListenTimers();
+    releaseWakeLock();
+    stopDescListening();
+    stopFormListening();
+    setListeningMic(null);
+    setLiveTranscript("");
+    finalsRef.current = "";
+  };
+
+  // Bug #7 — re-prompt the mic the user last tried after a permission denial.
+  const retryListening = () => {
+    const mic = activeMicRef.current;
+    if (mic === "describe") startDescribeListening();
+    else if (mic === "edit") startEditListening();
+  };
+
+  // Bug #7 — recognition error handler. A denied mic leaves the overlay stuck,
+  // so we force teardown and offer a Retry. Re-assigned each render so it always
+  // closes over the latest state; called via speechErrorRef from both hooks.
+  speechErrorRef.current = (error: string) => {
+    const denied =
+      error === "not-allowed" ||
+      error === "service-not-allowed" ||
+      error === "permission-denied";
+    cancelledRef.current = true; // discard any partial capture
+    resetVoiceSession();
+    if (denied) {
+      toast.error(
+        "Microphone access denied. Please allow microphone access in your browser settings and try again.",
+        { action: { label: "Retry", onClick: () => retryListening() } }
+      );
+    }
+  };
+
   const handleParse = () => {
     if (!description.trim()) {
       toast.error("Please describe your quote first");
@@ -302,13 +402,20 @@ export default function Home() {
   };
 
   const handleUpdateItem = (id: string, field: keyof QuoteLineItem, value: number) => {
-    setLineItems(items => items.map(item => item.id === id ? { ...item, [field]: value } : item));
+    // Overtime is a percentage and must never go negative (matches server clamp).
+    const v = field === "overtimePercent" ? Math.max(0, value) : value;
+    setLineItems(items => items.map(item => item.id === id ? { ...item, [field]: v } : item));
   };
+
+  // Bug #10 — overtime is a percentage markup on the BASE unitPrice. The charged
+  // rate per unit = unitPrice + (unitPrice * overtimePercent / 100).
+  const effectiveRate = (item: QuoteLineItem) =>
+    item.unitPrice * (1 + (item.overtimePercent ?? 0) / 100);
 
   const totals = useMemo(() => {
     let subtotal = 0;
     lineItems.forEach(item => {
-      subtotal += item.unitPrice * item.quantity;
+      subtotal += effectiveRate(item) * item.quantity;
     });
 
     const callOut = settings.hasCallOut ? settings.callOutFee : 0;
@@ -344,6 +451,8 @@ export default function Home() {
       onSuccess: () => {
         toast.success("Template saved successfully");
         setSaveDialogOpen(false);
+        // Bug #8 — the quote is now persisted server-side; drop the local draft.
+        try { sessionStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
       },
       onError: (err) => {
@@ -355,6 +464,58 @@ export default function Home() {
       }
     });
   };
+
+  // Bug #8 — persist the working quote on every change; clear once it's empty.
+  useEffect(() => {
+    if (templateId) return; // template-loaded quotes manage their own state
+    const hasContent = description.trim() || lineItems.length > 0;
+    try {
+      if (hasContent) {
+        sessionStorage.setItem(
+          RESTORE_KEY,
+          JSON.stringify({ description, lineItems, settings, businessName, hasParsed })
+        );
+      } else {
+        sessionStorage.removeItem(RESTORE_KEY);
+      }
+    } catch {
+      /* storage unavailable */
+    }
+  }, [templateId, description, lineItems, settings, businessName, hasParsed]);
+
+  // Bug #8 — tell the user a previous in-progress quote was brought back.
+  useEffect(() => {
+    if (restored) toast("Unsaved quote restored");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bug #9 — hold a wake lock whenever a voice overlay is visible.
+  useEffect(() => {
+    if (overlayOpen) requestWakeLock();
+    else releaseWakeLock();
+  }, [overlayOpen]);
+
+  // Bug #9 — a screen lock / tab switch silently kills speech recognition. If we
+  // were listening when the page was hidden, treat it as interrupted on return;
+  // otherwise just re-acquire the wake lock the browser auto-released.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (listeningMic !== null) {
+          interruptedRef.current = true;
+          cancelledRef.current = true; // discard any half-captured command
+        }
+      } else if (interruptedRef.current) {
+        interruptedRef.current = false;
+        resetVoiceSession();
+        toast("Voice session interrupted. Please tap the microphone to try again.");
+      } else if (overlayOpen) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [listeningMic, overlayOpen]);
 
   return (
     <Layout title={hasParsed ? "Quote Builder" : "New Quote"}>
@@ -415,7 +576,7 @@ export default function Home() {
                   <h3 className="font-bold text-lg text-primary tracking-tight">Line Items</h3>
                   <Button variant="ghost" size="sm" onClick={() => {
                     const id = Math.random().toString(36).substr(2, 9);
-                    setLineItems([...lineItems, { id, label: "New Item", unit: "ea", unitPrice: 0, quantity: 1, voiceKey: "new item" }]);
+                    setLineItems([...lineItems, { id, label: "New Item", unit: "ea", unitPrice: 0, quantity: 1, voiceKey: "new item", overtimePercent: 0 }]);
                   }}>
                     <Plus className="w-4 h-4 mr-1" /> Add
                   </Button>
@@ -430,11 +591,14 @@ export default function Home() {
                           <p className="text-xs text-muted-foreground">Voice cue: <span className="font-mono bg-muted px-1 py-0.5 rounded">{item.voiceKey}</span></p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-primary">${(item.quantity * item.unitPrice).toFixed(2)}</p>
+                          <p className="font-bold text-primary">${(effectiveRate(item) * item.quantity).toFixed(2)}</p>
+                          {(item.overtimePercent ?? 0) > 0 && (
+                            <p className="text-[10px] text-muted-foreground line-through">${(item.unitPrice * item.quantity).toFixed(2)}</p>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="flex gap-4">
+                      <div className="flex gap-3">
                         <div className="space-y-1.5 flex-1">
                           <Label className="text-xs text-muted-foreground">Qty ({item.unit})</Label>
                           <NumericInput
@@ -451,7 +615,22 @@ export default function Home() {
                             className="font-mono text-sm h-9"
                           />
                         </div>
+                        <div className="space-y-1.5 flex-1">
+                          <Label className="text-xs text-muted-foreground">Overtime (%)</Label>
+                          <NumericInput
+                            value={item.overtimePercent ?? 0}
+                            onValueChange={(v) => handleUpdateItem(item.id, "overtimePercent", v)}
+                            className="font-mono text-sm h-9"
+                          />
+                        </div>
                       </div>
+
+                      {(item.overtimePercent ?? 0) > 0 && (
+                        <div className="flex items-center justify-between rounded-md bg-accent/10 px-3 py-2 text-xs">
+                          <span className="text-muted-foreground">Base ${item.unitPrice.toFixed(2)} + {item.overtimePercent}% overtime</span>
+                          <span className="font-mono font-semibold text-primary">${effectiveRate(item).toFixed(2)}/{item.unit}</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

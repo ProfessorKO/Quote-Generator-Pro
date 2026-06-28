@@ -7,10 +7,12 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 export function useSpeechRecognition({
   onResult,
   onEnd,
+  onError,
   continuous = false,
 }: {
   onResult?: (transcript: string, isFinal: boolean) => void;
   onEnd?: () => void;
+  onError?: (error: string) => void;
   continuous?: boolean;
 }) {
   const [isListening, setIsListening] = useState(false);
@@ -18,6 +20,7 @@ export function useSpeechRecognition({
 
   const onResultRef = useRef(onResult);
   const onEndRef = useRef(onEnd);
+  const onErrorRef = useRef(onError);
 
   useEffect(() => {
     onResultRef.current = onResult;
@@ -26,6 +29,10 @@ export function useSpeechRecognition({
   useEffect(() => {
     onEndRef.current = onEnd;
   }, [onEnd]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     if (!SpeechRecognition) {
@@ -58,6 +65,10 @@ export function useSpeechRecognition({
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
+      // Surface the raw error code to the caller so it can react to permission
+      // denial (not-allowed / service-not-allowed) by tearing down its overlay
+      // and prompting the user. onend still fires afterwards for cleanup.
+      if (onErrorRef.current) onErrorRef.current(event.error);
     };
 
     recognition.onend = () => {
@@ -91,14 +102,22 @@ export function useSpeechRecognition({
       try {
         recognitionRef.current.start();
         setIsListening(true);
-      } catch (e) {
+      } catch (e: any) {
         // start() can throw synchronously (permission denied, invalid state).
         // No onend will fire, so we must signal the caller to tear down its
         // overlay/lock here — otherwise the UI stays stuck on "Listening…".
         console.error("Could not start recognition:", e);
         setIsListening(false);
-        toast.error("Couldn't start the microphone. Please check permissions and try again.");
-        if (onEndRef.current) onEndRef.current();
+        const name = e?.name || "";
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          // Permission denial on the synchronous path: route through onError so
+          // the caller shows the denial UX + Retry (same as the async onerror).
+          if (onErrorRef.current) onErrorRef.current("not-allowed");
+          else if (onEndRef.current) onEndRef.current();
+        } else {
+          toast.error("Couldn't start the microphone. Please check permissions and try again.");
+          if (onEndRef.current) onEndRef.current();
+        }
       }
     }
   }, [isListening]);

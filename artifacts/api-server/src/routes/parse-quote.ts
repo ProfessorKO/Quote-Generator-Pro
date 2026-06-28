@@ -79,6 +79,9 @@ Output this exact JSON structure:
       ...item,
       id: item.id || `item-${index + 1}`,
       quantity: item.quantity ?? 1,
+      overtimePercent: Number.isFinite(Number(item.overtimePercent)) && Number(item.overtimePercent) >= 0
+        ? Number(item.overtimePercent)
+        : 0,
       description: item.description ?? null,
     }));
   }

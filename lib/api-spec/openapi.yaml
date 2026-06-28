@@ -346,6 +346,12 @@ components:
         voiceKey:
           type: string
           description: Voice command keyword to set this field quantity
+        overtimePercent:
+          type: number
+          description: >-
+            Overtime markup percentage applied on top of the base unitPrice.
+            Effective rate = unitPrice + (unitPrice * overtimePercent / 100).
+            0 or absent means no overtime.
       required:
         - id
         - label
