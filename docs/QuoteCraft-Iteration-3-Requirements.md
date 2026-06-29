@@ -39,7 +39,7 @@ passwords.
 |-------|-------|--------------------|
 | **3a — Auth core** | Clerk integration, sign-up/sign-in, email-OTP verification, session wiring, marketing-consent capture. | A user can register, verify email, and stay logged in across reloads. |
 | **3b — Gating** | Intercept Save / Download / Email for anonymous users → auth modal → resume original action with quote preserved. | All three actions are blocked when logged out and resume correctly after verify. |
-| **3c — Persistence & dashboard** | Business-profile storage, quote-history table + save-on-create wiring, per-user templates, welcome/dashboard screen. | Dashboard shows the user's templates + quote history; new quotes are recorded. |
+| **3c — Persistence & dashboard** | Business-profile storage, quote-history + email-history tables + save-on-create wiring, template edit/delete, Settings/Profile page, dedicated dashboard with history filters, client emailing. | Dashboard shows templates + quote/email history with filters; new quotes are recorded; profile is editable. |
 
 ---
 
@@ -139,19 +139,79 @@ passwords.
 
 ## 6. Dashboard (post-verification)
 
-A **welcome screen / dashboard** shown after verification and reachable any time
-while logged in.
+A **dedicated dashboard route/screen** (`/dashboard`, resolved in §11) shown after
+verification and reachable any time while logged in.
 
 | Section | Content | Source |
 |---------|---------|--------|
 | Welcome header | Greeting with first name + business name | Clerk + business profile |
-| **Saved templates** | List of the user's templates; open/edit/delete | PostgreSQL (per-user) |
-| **Quote history** | List of generated/saved quotes (date, client/label, total) | PostgreSQL (new table) |
-| Quick actions | "New quote", "Open templates", account/sign-out | — |
+| **Settings / Profile** | Link/tab to view & edit the business profile (see §6.1) | PostgreSQL + Clerk |
+| **Saved templates** | List of templates; open / **rename / edit items** / delete (see §6.2) | PostgreSQL |
+| **Quote history** | Searchable/filterable list of quotes with a detail view (see §6.3) | PostgreSQL |
+| **Email history** | Record of quote emails sent to clients, with filters (see §6.3) | PostgreSQL |
+| Quick actions | "New quote", "Open templates", "Settings", account/sign-out | — |
 
 - Empty states: friendly prompts ("No quotes yet — create your first quote").
-- Templates uniqueness becomes **per-user** in this iteration (global rule from
-  Iteration 2 is the interim; see Dependencies).
+- Templates remain **global** in this iteration with a delete capability (per-user
+  ownership deferred; see §10/§11).
+
+### 6.1 Settings / Profile page
+A dedicated page to **view and update the business profile** used on quotes/PDFs.
+
+- **Editable fields:** business name, **mobile** (`+61-4` + 8 digits, see §4.2),
+  **ABN** (11-digit format check), **ACN** (optional, 9-digit format check), address,
+  marketing-consent flag.
+- **Name & email:** first name / surname / email are managed by **Clerk** (link out to
+  Clerk's account UI, or expose first/surname edits that write back to Clerk).
+- Saving validates the same rules as registration; changes persist to PostgreSQL
+  (Clerk fields write back to Clerk).
+
+### 6.2 Template management (edit)
+- **Rename** a template (subject to the global case-insensitive uniqueness rule).
+- **Edit items** — update the saved line items/settings of an existing template.
+- **Delete** a template (resolved in §11).
+- Empty state when no templates exist.
+
+### 6.3 Quote & Email history — detail view + filters
+- **List → detail:** each quote/email opens a **detail view** (full line items,
+  settings, totals, client info, and — for emails — the message sent and timestamp).
+- **Filters (both histories):**
+  - **Client name**
+  - **Client email**
+  - **Client suburb**
+  - **Month the quote was sent** (sent-date month/year)
+- Filters are combinable; empty states when no results match.
+
+### 6.4 Email quotes to clients (on behalf of the user)
+QuoteCraft can email a quote (with its PDF, Iteration 4) **to the client on the user's
+behalf**. See §6.5 for the sending capability.
+
+- **Editable client details per send:** **client name, client address, client email**
+  (and client suburb, used by history filters).
+- **Email template:** a user-editable **email template** (subject + body, with
+  placeholders such as client name, business name, quote total) used as the default
+  message; editable per send.
+- **Email records:** every send is **saved to the dashboard** (Email history) with
+  client name/email/suburb, subject, body snapshot, the quote reference, and sent
+  timestamp.
+- Sending is a **gated action** (verified users only) and **records the quote to
+  history** (Save / Download / Email all persist — §11).
+
+### 6.5 Email-sending capability (provider)
+> **Answer to "do we have native capability to send client emails?"** — Replit has
+> **no built-in service for sending arbitrary outbound client emails**, and **Clerk
+> only sends auth emails** (verification/welcome), not quotes to clients. To email
+> quotes on behalf of users we use a **first-class email integration** (handles OAuth/
+> API keys securely):
+>
+> - **Transactional providers — recommended:** **Resend** or **SendGrid** (also
+>   Brevo, Mailchimp, Loops.so). Emails are sent from a QuoteCraft sender; for best
+>   deliverability a verified domain (e.g. `quotecraft.com.au`) is configured.
+> - **User's own mailbox:** **Gmail** or **Microsoft Outlook** connectors send from
+>   the user's personal mailbox via OAuth (the client sees the user's own address).
+>
+> **Decision needed (see §11 open items):** which provider, and whether emails are
+> sent from a central QuoteCraft sender or each user's own mailbox.
 
 ---
 
@@ -160,20 +220,29 @@ while logged in.
 | Data | Where it lives |
 |------|----------------|
 | First name, surname, email, email verification, password (hashed), sessions/tokens | **Clerk** |
-| Business profile (business name, **mobile**, ABN, address, optional logo) | **PostgreSQL** |
+| Business profile (business name, **mobile**, **ABN**, **ACN**, address) | **PostgreSQL** |
 | Marketing-consent flag | **PostgreSQL** (or Clerk metadata) |
-| Templates (now per-user) | **PostgreSQL** |
+| Templates (global; with edit + delete) | **PostgreSQL** |
 | **Quote history (net-new)** | **PostgreSQL** |
+| **Email history (net-new)** — quote emails sent to clients | **PostgreSQL** |
 | Mobile — **captured at registration** (`+61-4` + 8 digits, see §4.2); pre-populates the PDF header (Iteration 4) | **PostgreSQL** |
 
 ### 7.1 New persistence (proposed)
 - **`business_profiles`** — one row per user: `userId` (Clerk id), `businessName`,
-  `mobile` (normalised `+61 4 XXXX XXXX`), `abn`, `address`, `logoUrl?`,
-  `marketingConsent` (bool), timestamps. (First name / surname / email live in Clerk.)
-- **`quotes`** (quote history) — `id`, `userId`, `label`/client, `lineItems`
-  (json), `settings` (json), computed `total`, `createdAt`.
+  `mobile` (normalised `+61 4 XXXX XXXX`), `abn`, `acn?`, `address`,
+  `marketingConsent` (bool), timestamps. (First name / surname / email live in Clerk.
+  **Logo scrapped** — not stored; see §11.)
+- **`quotes`** (quote history) — `id`, `userId`, `label`, `clientName?`,
+  `clientEmail?`, `clientAddress?`, `clientSuburb?`, `lineItems` (json),
+  `settings` (json), computed `total`, `createdAt`, `sentAt?`. (Client fields +
+  `sentAt` back the history filters in §6.3.)
+- **`email_records`** (email history) — `id`, `userId`, `quoteId`, `clientName`,
+  `clientEmail`, `clientSuburb?`, `subject`, `body` (snapshot), `status`, `sentAt`.
+- **`email_templates`** — user-editable default email subject/body for client sends
+  (one or more per user).
 - **Templates** — remain **global** in this iteration (per-user ownership deferred);
-  add a **delete** capability. The interim global case-insensitive unique index stays.
+  add **rename + edit-items** and **delete** capabilities. The interim global
+  case-insensitive unique index stays.
 - Save-on-create wiring records a quote to history when the user **saves, downloads,
   or emails** (resolved — see §11).
 - Dev and production use **separate databases** automatically; production is
@@ -224,10 +293,17 @@ while logged in.
 - [ ] Registration captures **first name, surname** (≤50 chars each), **business name,
       mobile** (`+61-4` + 8 digits), **ABN** (11-digit format check), **address** +
       optional marketing consent (unticked by default) and persists them appropriately.
-- [ ] The **dashboard is a dedicated route/screen** showing the user's saved templates
-      and quote history with empty states.
+- [ ] The **dashboard is a dedicated route/screen** showing saved templates, quote
+      history, and email history with empty states.
+- [ ] A **Settings/Profile page** lets the user view & update the business profile
+      (business name, mobile, ABN, ACN, address, marketing consent); name/email via Clerk.
+- [ ] Templates support **rename, edit items, and delete** (uniqueness stays global).
+- [ ] Quote history and email history each have a **detail view** and **filters** on
+      **client name, client email, client suburb, and quote-sent month**.
 - [ ] A quote is recorded to history on **Save, Download, or Email** (not on generation).
-- [ ] Templates remain global; a user can **delete** a template.
+- [ ] Users can **email a quote to a client** (on their behalf) with **editable client
+      name/address/email**, an **editable email template**, and every send is **saved
+      as an email record** on the dashboard.
 - [ ] Cancelling the auth modal leaves the quote intact and performs no action.
 
 ---
@@ -257,5 +333,20 @@ while logged in.
 4. **Branded sender — RESOLVED:** use the **default Clerk sender for now**. A custom
    email domain (`quotecraft.com.au`) is deferred.
 5. **Templates — RESOLVED:** **keep templates global for now** (no per-user migration
-   in this iteration), **but add the ability to delete a template**. Per-user template
+   in this iteration), **but add rename, edit-items, and delete**. Per-user template
    ownership is deferred to a later iteration.
+6. **ACN — RESOLVED:** **save ACN anyway** as an optional business-profile field
+   (9-digit format check), editable on the Settings/Profile page; flows through to the
+   PDF header (Iteration 4).
+7. **Settings/Profile, template editing, and quote/email history detail + filters** are
+   **in scope** for this iteration (filters: client name / email / suburb / sent month).
+
+### 11.1 Open items needing your sign-off (email sending)
+- **Email-sending capability is NOT native** to Replit/Clerk (Clerk only sends auth
+  emails). To email quotes to clients we must wire an **email integration**. Please pick:
+  - **Provider:** **Resend** or **SendGrid** (transactional, recommended) — *or* send
+    from the **user's own mailbox** via **Gmail / Outlook** OAuth.
+  - **Sender model:** central **QuoteCraft sender** (best with a verified domain) vs.
+    **each user's own email address**.
+- This choice gates the email-quotes feature (§6.4–§6.5); the rest of Iteration 3 can
+  proceed without it.

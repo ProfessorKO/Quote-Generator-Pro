@@ -30,7 +30,7 @@ the export form is pre-filled rather than manually typed every time.
 
 | Iteration 3 output | How Iteration 4 uses it |
 |--------------------|--------------------------|
-| **Business profile** (`business_profiles`): business name, **mobile**, ABN, address, optional logo | Pre-populates the PDF header form. |
+| **Business profile** (`business_profiles`): business name, **mobile**, **ABN**, **ACN**, address | Pre-populates the PDF header form. |
 | **First name / surname / email** (Clerk) | Default **contact name** + contact email on the PDF. |
 | **Auth gating** (verified users only) | Export is a gated action — only verified users can download a PDF. |
 | **Quote history** (`quotes`) | A downloaded quote is recorded to history (Save / Download / Email all persist — see Iteration 3 §11). |
@@ -46,18 +46,21 @@ the export form is pre-filled rather than manually typed every time.
 
 | Field | Required | Source / default | Notes |
 |-------|----------|------------------|-------|
-| **Logo** | Optional | Business profile (`logoUrl`) if set; else upload | Rendered **top-left** of the PDF. PNG/JPG; reasonable size cap. |
 | **Contact name** | **Yes** | Defaults to `First name + Surname` (Clerk) | Editable per export. |
 | **Business name** | Yes | Business profile | Editable; shown in header. |
 | **Mobile** | Optional on the PDF | Business profile (`+61 4 XXXX XXXX`) | Fixed read-only **`+61-4`** prefix + **8 digits** (see §5). If blank, omitted from the PDF. |
 | **Email** | Yes | Clerk email | Shown in header. |
 | **Address** | Yes | Business profile | Editable; shown in header. |
 | **ABN** | Optional override | Business profile | **11-digit** format check (same rule as registration). If present, shown in header. |
-| **ACN** | Optional | — (not captured at registration) | If present, shown in header. **9 digits** format check. |
+| **ACN** | Optional override | Business profile (`acn`) | **9-digit** format check. If present, shown in header. |
 
-All defaults are **editable** at export time; edits here do **not** silently change the
-saved business profile unless the user explicitly saves them (out of scope unless
-requested).
+> **No logo.** The logo upload/branding image has been **scrapped** (resolved §9) — the
+> PDF header is text-only.
+
+All defaults are **editable** at export time. If the user edits any header field so it
+**differs from the saved business profile**, on export **prompt them to save the changes
+back to the profile** (override) — see §9. Declining keeps the edit as a one-off for
+that PDF only.
 
 ---
 
@@ -76,8 +79,7 @@ requested).
 
 The generated PDF must include:
 
-1. **Header / branding block**
-   - Optional **logo** (top-left).
+1. **Header block** (text-only — no logo)
    - **Business name**, **contact name**, **address**, **email**, optional **mobile**,
      optional **ABN**, optional **ACN**.
 2. **Quote body**
@@ -98,9 +100,8 @@ The generated PDF must include:
 
 - [ ] Only **verified** users can download a PDF (gated, per Iteration 3).
 - [ ] PDF header **pre-populates** from the business profile (business name, mobile,
-      ABN, address) and Clerk (contact name, email); all are editable per export.
-- [ ] **Logo** is optional; when provided it renders top-left; when absent the layout
-      stays clean (no broken image / empty box).
+      ABN, ACN, address) and Clerk (contact name, email); all are editable per export.
+- [ ] The PDF header is **text-only — no logo**.
 - [ ] **Mobile** uses the fixed `+61-4` prefix + 8 digits; renders as `+61 4 XXXX XXXX`;
       **omitted entirely when blank**.
 - [ ] **ABN** (11 digits) and **ACN** (9 digits) are format-checked; shown only when
@@ -108,6 +109,9 @@ The generated PDF must include:
 - [ ] PDF renders **all line items**, the **GST (10%) breakdown**, call-out fee and
       surcharge when present, and the **grand total**.
 - [ ] PDF includes the exact **footer message**.
+- [ ] PDF is generated **client-side** (in-browser).
+- [ ] If header edits **differ from the saved profile**, the user is **prompted to save
+      the override** back to the business profile; declining keeps the edit one-off.
 - [ ] Downloading a quote **records it to history** (consistent with Iteration 3 §11).
 
 ---
@@ -117,17 +121,18 @@ The generated PDF must include:
 - Custom email domain / branded sender (deferred — default Clerk sender per Iteration 3).
 - Address lookup/validation (Enhancement #6 — deferred; address stays free-text).
 - Payment processing / invoicing beyond quote PDF generation.
-- Editing/saving business-profile changes from the export form (PDF-only overrides).
+- **Logo / branding image** — scrapped (§9).
 
 ---
 
-## 9. Open Questions for Sign-off
+## 9. Resolved Decisions (signed off)
 
-1. **Logo storage:** store the uploaded logo on the business profile (object storage +
-   `logoUrl`) so it persists across exports, or accept a per-export upload only?
-2. **ACN capture:** keep ACN as export-only (not in registration), or add it to the
-   business profile later?
-3. **PDF generation approach:** client-side (e.g. in-browser renderer) or server-side
-   rendering? (Affects logo handling and fidelity.)
-4. **Saved overrides:** if a user edits header fields at export time, should we offer to
-   update the saved business profile, or always keep export edits one-off?
+1. **Logo — RESOLVED:** **scrapped**. No logo upload or storage; the PDF header is
+   text-only.
+2. **ACN — RESOLVED:** **save it anyway** as an optional business-profile field
+   (9-digit format check, captured/editable in Iteration 3 Settings/Profile); it
+   pre-populates the PDF and is shown when present.
+3. **PDF generation approach — RESOLVED:** **client-side** (in-browser rendering).
+4. **Saved overrides — RESOLVED:** if export-time header edits differ from the saved
+   business profile, **prompt the user to save the changes** back to the profile
+   (override); if they decline, the edit applies to that PDF only.
