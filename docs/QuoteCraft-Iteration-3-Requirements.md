@@ -172,10 +172,10 @@ while logged in.
   `marketingConsent` (bool), timestamps. (First name / surname / email live in Clerk.)
 - **`quotes`** (quote history) — `id`, `userId`, `label`/client, `lineItems`
   (json), `settings` (json), computed `total`, `createdAt`.
-- **Templates** — add `userId`; uniqueness scope changes to **per-user**
-  case-insensitive (replacing the interim global unique index).
-- Save-on-create wiring records a quote to history when the user saves/downloads/
-  emails (confirm exact trigger — see Open Questions).
+- **Templates** — remain **global** in this iteration (per-user ownership deferred);
+  add a **delete** capability. The interim global case-insensitive unique index stays.
+- Save-on-create wiring records a quote to history when the user **saves, downloads,
+  or emails** (resolved — see §11).
 - Dev and production use **separate databases** automatically; production is
   read-only queryable for support/analytics.
 
@@ -221,18 +221,21 @@ while logged in.
 - [ ] OTP is 6 digits, expires in **10 minutes**, and the expiry is **stated in the
       email**; resend respects a 30–60 s cooldown.
 - [ ] Passwords are never handled/stored by the app (Clerk only).
-- [ ] Registration captures business name, ABN, address + optional marketing consent
-      (unticked by default) and persists them to PostgreSQL.
-- [ ] Dashboard shows the user's saved templates and quote history with empty states.
-- [ ] Quote history persists per user (new table + save-on-create wiring).
+- [ ] Registration captures **first name, surname** (≤50 chars each), **business name,
+      mobile** (`+61-4` + 8 digits), **ABN** (11-digit format check), **address** +
+      optional marketing consent (unticked by default) and persists them appropriately.
+- [ ] The **dashboard is a dedicated route/screen** showing the user's saved templates
+      and quote history with empty states.
+- [ ] A quote is recorded to history on **Save, Download, or Email** (not on generation).
+- [ ] Templates remain global; a user can **delete** a template.
 - [ ] Cancelling the auth modal leaves the quote intact and performs no action.
 
 ---
 
 ## 10. Dependencies & Downstream
 
-- **Bug #6** template-name uniqueness becomes **per-user** here (was enforced
-  globally in Iteration 2 as the interim).
+- **Bug #6** template-name uniqueness **remains global** here (per-user ownership is
+  deferred); this iteration adds the ability to **delete** a template.
 - **Enhancement #2 (Branded PDF, Iteration 4)** pre-populates from the business
   profile captured in this iteration.
 - **Quote history** is net-new persistence introduced here.
@@ -241,15 +244,18 @@ while logged in.
 
 ---
 
-## 11. Open Questions for Sign-off
+## 11. Resolved Decisions (signed off)
 
-1. **Quote-history trigger:** record a quote to history on **Save only**, or also on
-   **Download/Email** (and/or on first generation)?
-2. **Dashboard placement:** dedicated route/screen after verify, or an inline panel
-   the user can dismiss to resume their action?
-3. **ABN validation depth:** format-only (11 digits) for now, or schedule
-   authoritative ABR lookup later?
-4. **Branded sender:** use the default Clerk sender, or set up a custom email domain
-   (`quotecraft.com.au`) now?
-5. **Templates migration:** how to treat existing global templates when per-user
-   ownership is introduced (assign to first owner / keep shared / archive)?
+1. **Quote-history trigger — RESOLVED:** record a quote to history on **Save,
+   Download, and Email** (any of the three gated actions persists the quote). A quote
+   is **not** recorded on mere generation/edit.
+2. **Dashboard placement — RESOLVED:** the dashboard is a **dedicated route and
+   screen** (e.g. `/dashboard`), not an inline panel. After verify the user lands on
+   it; the gated action still auto-resumes (see Flow A).
+3. **ABN validation depth — RESOLVED:** **format-only — 11 digits**. No authoritative
+   ABR lookup in this iteration (may be scheduled later).
+4. **Branded sender — RESOLVED:** use the **default Clerk sender for now**. A custom
+   email domain (`quotecraft.com.au`) is deferred.
+5. **Templates — RESOLVED:** **keep templates global for now** (no per-user migration
+   in this iteration), **but add the ability to delete a template**. Per-user template
+   ownership is deferred to a later iteration.
