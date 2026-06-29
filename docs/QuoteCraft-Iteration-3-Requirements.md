@@ -87,15 +87,32 @@ passwords.
 | Sign-out | Available from dashboard/profile menu | Clears Clerk session. |
 
 ### 4.1 Registration fields
-| Field | Required | Stored in | Validation |
-|-------|----------|-----------|------------|
-| Full name | Yes | Clerk | Non-empty. |
-| Email | Yes | Clerk | Valid email; verified via OTP. |
-| Password | Yes | Clerk (hashed) | Min 8 chars (Clerk). App never sees raw value. |
-| **Business name** | Yes | PostgreSQL (business profile) | Non-empty; pre-populates PDF. |
-| **ABN** | Yes | PostgreSQL | 11 digits (format check; not authoritative ABR validation). |
-| **Address** | Yes | PostgreSQL | Free text (Enh #6 verified lookup is deferred). |
-| **Marketing consent** | No | PostgreSQL (or Clerk metadata) | **Checkbox, unticked by default** (AU Spam Act 2003). |
+| Field | Type | Required | Stored in | Validation |
+|-------|------|----------|-----------|------------|
+| **First name** | string | Yes | Clerk (`firstName`) | Non-empty; **max 50 characters**. |
+| **Surname** (last name) | string | Yes | Clerk (`lastName`) | Non-empty; **max 50 characters**. |
+| Email | string | Yes | Clerk | Valid email; verified via OTP. |
+| Password | string | Yes | Clerk (hashed) | Min 8 chars (Clerk). App never sees raw value. |
+| **Business name** | string | Yes | PostgreSQL (business profile) | Non-empty; pre-populates PDF. |
+| **Mobile** | string | Yes | PostgreSQL (business profile) | Fixed **`+61-4`** prefix shown in the field (read-only); user enters the **remaining 8 digits**. Stored/exported as `+61 4 XXXX XXXX`. See §4.2. |
+| **ABN** | string | Yes | PostgreSQL | 11 digits (format check; not authoritative ABR validation). |
+| **Address** | string | Yes | PostgreSQL | Free text (Enh #6 verified lookup is deferred). |
+| **Marketing consent** | boolean | No | PostgreSQL (or Clerk metadata) | **Checkbox, unticked by default** (AU Spam Act 2003). |
+
+> **Australian-English note:** the name is split into **First name** + **Surname**
+> (AU convention; "Surname" preferred over "Last name", though either label is
+> acceptable in the UI). Both map to Clerk's `firstName` / `lastName`. Clerk's
+> "full name" is derived as `First name + Surname`.
+
+### 4.2 Mobile field — format & rules
+- **Prefix:** a fixed, **read-only `+61-4`** is rendered to the left of the input so
+  every number is an Australian mobile. The user **cannot edit the prefix**.
+- **User entry:** exactly **8 digits** (the part after the leading `4`). Strip
+  spaces/non-digits on input; reject if not exactly 8 digits.
+- **Stored value:** normalise to **`+61 4 XXXX XXXX`** (or E.164 `+614XXXXXXXX`
+  internally) so it is consistent with the planned PDF format (Iteration 4).
+- **Display/export:** shown on the dashboard/profile and pre-populates the branded
+  PDF header in Iteration 4.
 
 ---
 
@@ -142,16 +159,17 @@ while logged in.
 
 | Data | Where it lives |
 |------|----------------|
-| Full name, email, email verification, password (hashed), sessions/tokens | **Clerk** |
-| Business profile (business name, ABN, address, optional logo) | **PostgreSQL** |
+| First name, surname, email, email verification, password (hashed), sessions/tokens | **Clerk** |
+| Business profile (business name, **mobile**, ABN, address, optional logo) | **PostgreSQL** |
 | Marketing-consent flag | **PostgreSQL** (or Clerk metadata) |
 | Templates (now per-user) | **PostgreSQL** |
 | **Quote history (net-new)** | **PostgreSQL** |
-| Mobile number (optional, per PDF export — Iteration 4) | **PostgreSQL** (only if provided) |
+| Mobile — **captured at registration** (`+61-4` + 8 digits, see §4.2); pre-populates the PDF header (Iteration 4) | **PostgreSQL** |
 
 ### 7.1 New persistence (proposed)
 - **`business_profiles`** — one row per user: `userId` (Clerk id), `businessName`,
-  `abn`, `address`, `logoUrl?`, `marketingConsent` (bool), timestamps.
+  `mobile` (normalised `+61 4 XXXX XXXX`), `abn`, `address`, `logoUrl?`,
+  `marketingConsent` (bool), timestamps. (First name / surname / email live in Clerk.)
 - **`quotes`** (quote history) — `id`, `userId`, `label`/client, `lineItems`
   (json), `settings` (json), computed `total`, `createdAt`.
 - **Templates** — add `userId`; uniqueness scope changes to **per-user**
@@ -171,8 +189,9 @@ while logged in.
 3. Optionally edits via Mic 2 / numeric inputs. *(ungated)*
 4. Taps **Save / Download / Email** → **gate triggers**.
 5. App **saves the in-progress quote** to storage and opens the **Auth modal**.
-6. User chooses **Sign up** → enters full name, email, password, **business name,
-   ABN, address**, optional **marketing consent** (unticked).
+6. User chooses **Sign up** → enters **first name, surname** (≤50 chars each),
+   email, password, **business name, mobile** (`+61-4` + 8 digits), **ABN,
+   address**, optional **marketing consent** (unticked).
 7. Clerk emails a **6-digit OTP** (expires in 10 min).
 8. User enters the code (can **Resend** after 30–60 s cooldown).
 9. On verify → **Welcome email** sent → user sees **Welcome/Dashboard** (or returns
