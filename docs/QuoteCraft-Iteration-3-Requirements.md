@@ -197,7 +197,18 @@ behalf**. See §6.5 for the sending capability.
 - Sending is a **gated action** (verified users only) and **records the quote to
   history** (Save / Download / Email all persist — §11).
 
-### 6.5 Email-sending capability (provider)
+### 6.5 Email-sending capability (provider) — Resend (connected)
+> **Provider decision — RESOLVED:** **Resend** is connected via the Replit Resend
+> integration (credentials handled by the connector proxy; the app never stores raw
+> API keys). Emails are sent **server-side from the api-server** using the Resend
+> connector. The `@replit/connectors-sdk` package will be added to the **api-server**
+> package when the feature is built (not the workspace root).
+>
+> **Sender model (still to confirm):** send from a **central QuoteCraft address on a
+> verified domain** (e.g. `quotecraft.com.au`, best deliverability) vs. a Resend
+> shared/sandbox sender for development. Domain verification (DKIM/SPF DNS records) is
+> required for production deliverability.
+>
 > **Answer to "do we have native capability to send client emails?"** — Replit has
 > **no built-in service for sending arbitrary outbound client emails**, and **Clerk
 > only sends auth emails** (verification/welcome), not quotes to clients. To email
@@ -341,12 +352,11 @@ behalf**. See §6.5 for the sending capability.
 7. **Settings/Profile, template editing, and quote/email history detail + filters** are
    **in scope** for this iteration (filters: client name / email / suburb / sent month).
 
-### 11.1 Open items needing your sign-off (email sending)
-- **Email-sending capability is NOT native** to Replit/Clerk (Clerk only sends auth
-  emails). To email quotes to clients we must wire an **email integration**. Please pick:
-  - **Provider:** **Resend** or **SendGrid** (transactional, recommended) — *or* send
-    from the **user's own mailbox** via **Gmail / Outlook** OAuth.
-  - **Sender model:** central **QuoteCraft sender** (best with a verified domain) vs.
-    **each user's own email address**.
-- This choice gates the email-quotes feature (§6.4–§6.5); the rest of Iteration 3 can
-  proceed without it.
+### 11.1 Email sending — provider RESOLVED, one item open
+- **Provider — RESOLVED:** **Resend**, connected via the Replit integration (no raw
+  API keys in the app; sent server-side from the api-server).
+- **Still to confirm — sender domain:** use a **verified custom domain**
+  (`quotecraft.com.au`) for production deliverability, or a Resend **shared/sandbox
+  sender** for development only. Domain verification needs DKIM/SPF DNS records.
+- The email-quotes feature (§6.4–§6.5) can be built against Resend now; the rest of
+  Iteration 3 is independent of the domain question.
