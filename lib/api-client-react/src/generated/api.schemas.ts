@@ -81,6 +81,113 @@ export interface VoiceCommandResult {
   understood: boolean;
 }
 
+export interface BusinessProfile {
+  id: number;
+  businessName: string;
+  mobile: string;
+  abn: string;
+  /** @nullable */
+  acn?: string | null;
+  address: string;
+  marketingConsent: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessProfileInput {
+  businessName: string;
+  mobile: string;
+  abn: string;
+  /** @nullable */
+  acn?: string | null;
+  address: string;
+  marketingConsent: boolean;
+}
+
+export interface QuoteRecord {
+  id: number;
+  label: string;
+  /** @nullable */
+  clientName?: string | null;
+  /** @nullable */
+  clientEmail?: string | null;
+  /** @nullable */
+  clientAddress?: string | null;
+  /** @nullable */
+  clientSuburb?: string | null;
+  lineItems: QuoteLineItem[];
+  settings: QuoteSettings;
+  total: number;
+  source: string;
+  createdAt: string;
+  /** @nullable */
+  sentAt?: string | null;
+}
+
+export interface QuoteRecordInput {
+  label: string;
+  /** @nullable */
+  clientName?: string | null;
+  /** @nullable */
+  clientEmail?: string | null;
+  /** @nullable */
+  clientAddress?: string | null;
+  /** @nullable */
+  clientSuburb?: string | null;
+  lineItems: QuoteLineItem[];
+  settings: QuoteSettings;
+  total: number;
+  /** One of save, download, email */
+  source: string;
+}
+
+export interface EmailTemplate {
+  id: number;
+  subject: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailTemplateInput {
+  subject: string;
+  body: string;
+}
+
+export interface EmailRecord {
+  id: number;
+  /** @nullable */
+  quoteId?: number | null;
+  clientName: string;
+  clientEmail: string;
+  /** @nullable */
+  clientSuburb?: string | null;
+  subject: string;
+  body: string;
+  status: string;
+  sentAt: string;
+}
+
+export interface SendQuoteEmailInput {
+  /** @nullable */
+  quoteId?: number | null;
+  clientName: string;
+  clientEmail: string;
+  /** @nullable */
+  clientAddress?: string | null;
+  /** @nullable */
+  clientSuburb?: string | null;
+  subject: string;
+  body: string;
+  /**
+     * Base64-encoded PDF of the quote to attach
+     * @nullable
+     */
+  attachmentBase64?: string | null;
+  /** @nullable */
+  attachmentFilename?: string | null;
+}
+
 export interface OpenaiConversation {
   id: number;
   title: string;
@@ -131,4 +238,24 @@ export interface OpenaiImageOutput {
 export interface OpenaiError {
   error: string;
 }
+
+export type ListQuotesParams = {
+clientName?: string;
+clientEmail?: string;
+clientSuburb?: string;
+/**
+ * Filter by quote-sent month in YYYY-MM format
+ */
+sentMonth?: string;
+};
+
+export type ListEmailRecordsParams = {
+clientName?: string;
+clientEmail?: string;
+clientSuburb?: string;
+/**
+ * Filter by sent month in YYYY-MM format
+ */
+sentMonth?: string;
+};
 

@@ -254,6 +254,242 @@ export const ApplyVoiceCommandResponse = zod.object({
 
 
 /**
+ * @summary Get the current user's business profile
+ */
+export const GetBusinessProfileResponse = zod.object({
+  "id": zod.number(),
+  "businessName": zod.string(),
+  "mobile": zod.string(),
+  "abn": zod.string(),
+  "acn": zod.string().nullish(),
+  "address": zod.string(),
+  "marketingConsent": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or update the current user's business profile
+ */
+export const UpsertBusinessProfileBody = zod.object({
+  "businessName": zod.string(),
+  "mobile": zod.string(),
+  "abn": zod.string(),
+  "acn": zod.string().nullish(),
+  "address": zod.string(),
+  "marketingConsent": zod.boolean()
+})
+
+export const UpsertBusinessProfileResponse = zod.object({
+  "id": zod.number(),
+  "businessName": zod.string(),
+  "mobile": zod.string(),
+  "abn": zod.string(),
+  "acn": zod.string().nullish(),
+  "address": zod.string(),
+  "marketingConsent": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the current user's quote history with optional filters
+ */
+export const ListQuotesQueryParams = zod.object({
+  "clientName": zod.coerce.string().optional(),
+  "clientEmail": zod.coerce.string().optional(),
+  "clientSuburb": zod.coerce.string().optional(),
+  "sentMonth": zod.coerce.string().optional().describe('Filter by quote-sent month in YYYY-MM format')
+})
+
+export const ListQuotesResponseItem = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "clientName": zod.string().nullish(),
+  "clientEmail": zod.string().nullish(),
+  "clientAddress": zod.string().nullish(),
+  "clientSuburb": zod.string().nullish(),
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+}),
+  "total": zod.number(),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "sentAt": zod.coerce.date().nullish()
+})
+export const ListQuotesResponse = zod.array(ListQuotesResponseItem)
+
+
+/**
+ * @summary Record a quote to history
+ */
+export const CreateQuoteBody = zod.object({
+  "label": zod.string(),
+  "clientName": zod.string().nullish(),
+  "clientEmail": zod.string().nullish(),
+  "clientAddress": zod.string().nullish(),
+  "clientSuburb": zod.string().nullish(),
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+}),
+  "total": zod.number(),
+  "source": zod.string().describe('One of save, download, email')
+})
+
+
+/**
+ * @summary Get a single quote from history
+ */
+export const GetQuoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetQuoteResponse = zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "clientName": zod.string().nullish(),
+  "clientEmail": zod.string().nullish(),
+  "clientAddress": zod.string().nullish(),
+  "clientSuburb": zod.string().nullish(),
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+}),
+  "total": zod.number(),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "sentAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Get the current user's default client-email template
+ */
+export const GetEmailTemplateResponse = zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or update the default client-email template
+ */
+export const UpsertEmailTemplateBody = zod.object({
+  "subject": zod.string(),
+  "body": zod.string()
+})
+
+export const UpsertEmailTemplateResponse = zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the current user's sent client emails with optional filters
+ */
+export const ListEmailRecordsQueryParams = zod.object({
+  "clientName": zod.coerce.string().optional(),
+  "clientEmail": zod.coerce.string().optional(),
+  "clientSuburb": zod.coerce.string().optional(),
+  "sentMonth": zod.coerce.string().optional().describe('Filter by sent month in YYYY-MM format')
+})
+
+export const ListEmailRecordsResponseItem = zod.object({
+  "id": zod.number(),
+  "quoteId": zod.number().nullish(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string(),
+  "clientSuburb": zod.string().nullish(),
+  "subject": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.coerce.date()
+})
+export const ListEmailRecordsResponse = zod.array(ListEmailRecordsResponseItem)
+
+
+/**
+ * @summary Email a quote to a client on the user's behalf
+ */
+export const SendQuoteEmailBody = zod.object({
+  "quoteId": zod.number().nullish(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string(),
+  "clientAddress": zod.string().nullish(),
+  "clientSuburb": zod.string().nullish(),
+  "subject": zod.string(),
+  "body": zod.string(),
+  "attachmentBase64": zod.string().nullish().describe('Base64-encoded PDF of the quote to attach'),
+  "attachmentFilename": zod.string().nullish()
+})
+
+export const SendQuoteEmailResponse = zod.object({
+  "id": zod.number(),
+  "quoteId": zod.number().nullish(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string(),
+  "clientSuburb": zod.string().nullish(),
+  "subject": zod.string(),
+  "body": zod.string(),
+  "status": zod.string(),
+  "sentAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List all conversations
  */
 export const ListOpenaiConversationsResponseItem = zod.object({

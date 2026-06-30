@@ -7,7 +7,14 @@
  */
 
 export * from './apiError';
+export * from './businessProfile';
+export * from './businessProfileInput';
+export * from './emailRecord';
+export * from './emailTemplate';
+export * from './emailTemplateInput';
 export * from './healthStatus';
+export * from './listEmailRecordsParams';
+export * from './listQuotesParams';
 export * from './openaiConversation';
 export * from './openaiConversationInput';
 export * from './openaiConversationWithMessages';
@@ -20,8 +27,11 @@ export * from './openaiMessageInput';
 export * from './parsedQuote';
 export * from './parseQuoteInput';
 export * from './quoteLineItem';
+export * from './quoteRecord';
+export * from './quoteRecordInput';
 export * from './quoteSettings';
 export * from './quoteTemplate';
 export * from './quoteTemplateInput';
+export * from './sendQuoteEmailInput';
 export * from './voiceCommandInput';
 export * from './voiceCommandResult';

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
+import { useUser } from "@clerk/react";
 import { Layout } from "@/components/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Loader2, Save, Trash2, Plus, FileText, CheckCircle2 } from "lucide-react";
+import { Mic, Loader2, Save, Trash2, Plus, FileText, CheckCircle2, Download, Mail } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/use-speech";
-import { useParseQuoteDescription, useApplyVoiceCommand, useCreateTemplate, getListTemplatesQueryKey, useGetTemplate, QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
+import { useParseQuoteDescription, useApplyVoiceCommand, useCreateTemplate, getListTemplatesQueryKey, getListQuotesQueryKey, useCreateQuote, useGetTemplate, QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
 import { toast } from "sonner";
+import { ExportPdfDialog } from "@/components/export-pdf-dialog";
+import { EmailQuoteDialog } from "@/components/email-quote-dialog";
+import { buildQuoteRecord } from "@/lib/quote-record";
+import {
+  setPendingAction,
+  peekPendingAction,
+  clearPendingAction,
+  type PendingAction,
+} from "@/lib/auth-actions";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -223,9 +233,49 @@ export default function Home() {
   };
 
   const queryClient = useQueryClient();
+  const { isSignedIn, user } = useUser();
   const parseQuote = useParseQuoteDescription();
   const applyVoiceCommand = useApplyVoiceCommand();
   const createTemplate = useCreateTemplate();
+  const createQuote = useCreateQuote();
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+
+  // Entitlement = signed in with a verified email (Iteration 3 §3.2). A
+  // logged-in-but-unverified user is treated as not entitled.
+  const isEntitled =
+    !!isSignedIn &&
+    user?.primaryEmailAddress?.verification?.status === "verified";
+
+  // Open the right flow for a gated action once the user is entitled.
+  const runEntitledAction = (action: PendingAction) => {
+    if (action === "save") {
+      setTemplateName(businessName || "New Template");
+      setSaveDialogOpen(true);
+    } else if (action === "download") {
+      setExportOpen(true);
+    } else if (action === "email") {
+      setEmailOpen(true);
+    }
+  };
+
+  // Gate Save / Download / Email. Anonymous (or unverified) users have their
+  // in-progress quote preserved (RESTORE_KEY effect) and the intended action
+  // stashed, then are sent to sign-in; PostAuthGate resumes them at /quote.
+  const handleGatedAction = (action: PendingAction) => {
+    if (lineItems.length === 0) {
+      toast.error("Generate a quote first");
+      return;
+    }
+    if (!isEntitled) {
+      setPendingAction(action);
+      toast("Create a free account to continue");
+      setLocation("/sign-in");
+      return;
+    }
+    runEntitledAction(action);
+  };
   const { data: loadedTemplate, isSuccess: templateLoaded } = useGetTemplate(Number(templateId), {
     query: { enabled: !!templateId, queryKey: ["template", templateId] }
   });
@@ -239,6 +289,22 @@ export default function Home() {
       setHasParsed(true);
     }
   }, [templateLoaded, loadedTemplate, hasParsed]);
+
+  // Auto-resume a gated action after the auth round-trip (Iteration 3 §3.3).
+  // PostAuthGate lands an entitled user with a pending action back here; once the
+  // restored quote is on screen, open the matching flow and clear the marker.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    if (!isEntitled) return;
+    const pending = peekPendingAction();
+    if (!pending) return;
+    if (lineItems.length === 0) return; // wait for the restored quote
+    resumedRef.current = true;
+    clearPendingAction();
+    runEntitledAction(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntitled, lineItems.length]);
 
   const {
     isListening: descListening,
@@ -536,6 +602,23 @@ export default function Home() {
         // Bug #8 — the quote is now persisted server-side; drop the local draft.
         try { sessionStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
+        // Save is a gated action → also record the quote to history (§11).
+        createQuote.mutate(
+          {
+            data: buildQuoteRecord({
+              label: templateName || businessName,
+              lineItems,
+              settings,
+              source: "save",
+            }),
+          },
+          {
+            onSuccess: () =>
+              queryClient.invalidateQueries({ queryKey: getListQuotesQueryKey() }),
+            onError: () =>
+              toast.error("Saved as template, but couldn't add it to your history"),
+          },
+        );
       },
       onError: (err) => {
         if ((err as { status?: number })?.status === 409) {
@@ -821,16 +904,30 @@ export default function Home() {
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
-                className="w-full h-12 text-base font-semibold"
-                onClick={() => {
-                  setTemplateName(businessName || "New Template");
-                  setSaveDialogOpen(true);
-                }}
-              >
-                <Save className="w-5 h-5 mr-2" /> Save as Template
-              </Button>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    className="h-12 text-base font-semibold"
+                    onClick={() => handleGatedAction("download")}
+                  >
+                    <Download className="w-5 h-5 mr-2" /> Download PDF
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="h-12 text-base font-semibold"
+                    onClick={() => handleGatedAction("email")}
+                  >
+                    <Mail className="w-5 h-5 mr-2" /> Email
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-base font-semibold"
+                  onClick={() => handleGatedAction("save")}
+                >
+                  <Save className="w-5 h-5 mr-2" /> Save as Template
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -920,6 +1017,22 @@ export default function Home() {
         onOpenChange={setPermissionDialogOpen}
         onRetry={retryListening}
         retrying={retryingPermission}
+      />
+
+      <ExportPdfDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        label={businessName || "Quote"}
+        lineItems={lineItems}
+        settings={settings}
+      />
+
+      <EmailQuoteDialog
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        label={businessName || "Quote"}
+        lineItems={lineItems}
+        settings={settings}
       />
 
     </Layout>

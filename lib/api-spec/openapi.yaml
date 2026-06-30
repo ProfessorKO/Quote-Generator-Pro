@@ -173,6 +173,207 @@ paths:
               schema:
                 $ref: "#/components/schemas/VoiceCommandResult"
 
+  /profile:
+    get:
+      operationId: getBusinessProfile
+      tags: [profile]
+      summary: Get the current user's business profile
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+        "404":
+          description: No profile yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: upsertBusinessProfile
+      tags: [profile]
+      summary: Create or update the current user's business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessProfileInput"
+      responses:
+        "200":
+          description: Saved business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+
+  /quotes:
+    get:
+      operationId: listQuotes
+      tags: [quotes]
+      summary: List the current user's quote history with optional filters
+      parameters:
+        - name: clientName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientEmail
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientSuburb
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sentMonth
+          in: query
+          required: false
+          description: Filter by quote-sent month in YYYY-MM format
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuoteRecord"
+    post:
+      operationId: createQuote
+      tags: [quotes]
+      summary: Record a quote to history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteRecordInput"
+      responses:
+        "201":
+          description: Created quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+
+  /quotes/{id}:
+    get:
+      operationId: getQuote
+      tags: [quotes]
+      summary: Get a single quote from history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /email-template:
+    get:
+      operationId: getEmailTemplate
+      tags: [email]
+      summary: Get the current user's default client-email template
+      responses:
+        "200":
+          description: Email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+    put:
+      operationId: upsertEmailTemplate
+      tags: [email]
+      summary: Create or update the default client-email template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailTemplateInput"
+      responses:
+        "200":
+          description: Saved email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+
+  /email-records:
+    get:
+      operationId: listEmailRecords
+      tags: [email]
+      summary: List the current user's sent client emails with optional filters
+      parameters:
+        - name: clientName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientEmail
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientSuburb
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sentMonth
+          in: query
+          required: false
+          description: Filter by sent month in YYYY-MM format
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of email records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailRecord"
+
+  /send-quote-email:
+    post:
+      operationId: sendQuoteEmail
+      tags: [email]
+      summary: Email a quote to a client on the user's behalf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendQuoteEmailInput"
+      responses:
+        "200":
+          description: Email sent and recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailRecord"
+
   /openai/conversations:
     get:
       operationId: listOpenaiConversations
@@ -493,6 +694,224 @@ components:
         - settings
         - message
         - understood
+
+    BusinessProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        mobile:
+          type: string
+        abn:
+          type: string
+        acn:
+          type: ["string", "null"]
+        address:
+          type: string
+        marketingConsent:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - businessName
+        - mobile
+        - abn
+        - address
+        - marketingConsent
+        - createdAt
+        - updatedAt
+
+    BusinessProfileInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+        mobile:
+          type: string
+        abn:
+          type: string
+        acn:
+          type: ["string", "null"]
+        address:
+          type: string
+        marketingConsent:
+          type: boolean
+      required:
+        - businessName
+        - mobile
+        - abn
+        - address
+        - marketingConsent
+
+    QuoteRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        clientName:
+          type: ["string", "null"]
+        clientEmail:
+          type: ["string", "null"]
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        total:
+          type: number
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - label
+        - lineItems
+        - settings
+        - total
+        - source
+        - createdAt
+
+    QuoteRecordInput:
+      type: object
+      properties:
+        label:
+          type: string
+        clientName:
+          type: ["string", "null"]
+        clientEmail:
+          type: ["string", "null"]
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        total:
+          type: number
+        source:
+          type: string
+          description: One of save, download, email
+      required:
+        - label
+        - lineItems
+        - settings
+        - total
+        - source
+
+    EmailTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - subject
+        - body
+        - createdAt
+        - updatedAt
+
+    EmailTemplateInput:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+        - subject
+        - body
+
+    EmailRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        quoteId:
+          type: ["integer", "null"]
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientSuburb:
+          type: ["string", "null"]
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clientName
+        - clientEmail
+        - subject
+        - body
+        - status
+        - sentAt
+
+    SendQuoteEmailInput:
+      type: object
+      properties:
+        quoteId:
+          type: ["integer", "null"]
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        subject:
+          type: string
+        body:
+          type: string
+        attachmentBase64:
+          type: ["string", "null"]
+          description: Base64-encoded PDF of the quote to attach
+        attachmentFilename:
+          type: ["string", "null"]
+      required:
+        - clientName
+        - clientEmail
+        - subject
+        - body
 
     OpenaiConversation:
       type: object
