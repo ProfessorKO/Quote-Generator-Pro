@@ -76,7 +76,7 @@ export default function Templates() {
             <p className="text-muted-foreground text-sm mb-6 max-w-[250px] mx-auto">
               Create your first quote and save it as a template for quick access next time.
             </p>
-            <Button onClick={() => setLocation("/")} className="font-medium">
+            <Button onClick={() => setLocation("/quote")} className="font-medium">
               <PlusCircle className="w-4 h-4 mr-2" />
               Create New Quote
             </Button>
@@ -87,7 +87,7 @@ export default function Templates() {
               <Card 
                 key={template.id} 
                 className="overflow-hidden border-border shadow-sm hover:border-primary/50 transition-colors cursor-pointer group active:scale-[0.98]"
-                onClick={() => setLocation(`/?templateId=${template.id}`)}
+                onClick={() => setLocation(`/quote?templateId=${template.id}`)}
               >
                 <CardContent className="p-4 flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">

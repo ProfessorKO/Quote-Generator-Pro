@@ -32,7 +32,7 @@ export function Layout({ children, title, showBack }: LayoutProps) {
 
         {/* Bottom Nav */}
         <nav className="h-16 border-t border-border bg-card flex items-center justify-around px-6 shrink-0 z-10 pb-safe">
-          <Link href="/" className={cn("flex flex-col items-center gap-1 text-xs font-medium transition-colors", location === "/" ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          <Link href="/quote" className={cn("flex flex-col items-center gap-1 text-xs font-medium transition-colors", location === "/quote" ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
             <Home className="w-5 h-5" />
             <span>New Quote</span>
           </Link>

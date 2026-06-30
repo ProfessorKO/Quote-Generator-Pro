@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
+const Landing = lazy(() => import("@/pages/landing"));
 const Home = lazy(() => import("@/pages/home"));
 const Templates = lazy(() => import("@/pages/templates"));
 
@@ -32,7 +33,8 @@ function Router() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Switch>
-        <Route path="/" component={Home} />
+        <Route path="/" component={Landing} />
+        <Route path="/quote" component={Home} />
         <Route path="/templates" component={Templates} />
         <Route component={NotFound} />
       </Switch>
