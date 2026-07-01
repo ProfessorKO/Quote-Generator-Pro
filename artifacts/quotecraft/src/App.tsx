@@ -100,7 +100,10 @@ const clerkAppearance = {
     formFieldInput: "bg-white border-[#D1D6E0] text-[#13203A]",
     footerAction: "",
     dividerLine: "bg-[#D1D6E0]",
-    otpCodeFieldInput: "border-[#D1D6E0] text-[#13203A]",
+    formResendCodeLink: "text-[#1B2C4D] font-semibold hover:text-[#F2930D]",
+    otpCodeFieldInputs: "!gap-2 justify-center",
+    otpCodeFieldInput:
+      "!w-11 !h-12 !rounded-lg !border !border-[#D1D6E0] !bg-white !text-center !text-lg !font-semibold !text-[#13203A] focus:!border-[#1B2C4D] focus:!ring-2 focus:!ring-[#1B2C4D]/25 focus:!outline-none",
   },
 };
 

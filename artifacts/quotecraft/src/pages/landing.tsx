@@ -10,7 +10,6 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 const FEATURES = [
   {
@@ -40,12 +39,7 @@ export default function Landing() {
 
   const startAsGuest = () => setLocation("/quote");
 
-  const signIn = () => {
-    toast.info("Accounts are coming soon — start as a guest for now.", {
-      description: "Your quote stays with you when sign-in arrives.",
-    });
-    setLocation("/quote");
-  };
+  const signIn = () => setLocation("/sign-in");
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex justify-center">
