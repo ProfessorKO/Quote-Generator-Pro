@@ -184,6 +184,22 @@
   body {
     @apply font-sans antialiased bg-background text-foreground selection:bg-accent selection:text-accent-foreground;
   }
+  /* Neutralize the browser's yellow autofill background so autofilled inputs
+     match the theme instead of looking like an error/unaccepted state. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--background)) inset;
+    box-shadow: 0 0 0 1000px hsl(var(--background)) inset;
+    -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 /* Clerk input placeholder contrast (pseudo-states can't be set via the JS object) */
