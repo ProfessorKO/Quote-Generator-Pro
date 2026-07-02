@@ -466,6 +466,33 @@ export const ListEmailRecordsResponse = zod.array(ListEmailRecordsResponseItem)
  */
 export const SendQuoteEmailBody = zod.object({
   "quoteId": zod.number().nullish(),
+  "quote": zod.object({
+  "label": zod.string(),
+  "clientName": zod.string().nullish(),
+  "clientEmail": zod.string().nullish(),
+  "clientAddress": zod.string().nullish(),
+  "clientSuburb": zod.string().nullish(),
+  "lineItems": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "unit": zod.string(),
+  "unitPrice": zod.number(),
+  "quantity": zod.number(),
+  "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+})),
+  "settings": zod.object({
+  "includeGst": zod.boolean(),
+  "gstRate": zod.number(),
+  "callOutFee": zod.number(),
+  "publicHolidaySurchargePercent": zod.number(),
+  "isPublicHoliday": zod.boolean(),
+  "hasCallOut": zod.boolean()
+}),
+  "total": zod.number(),
+  "source": zod.string().describe('One of save, download, email')
+}).optional().describe('Quote to record only if the email is sent successfully. Provide this (instead of quoteId) so the quote is never persisted for a failed send.'),
   "clientName": zod.string(),
   "clientEmail": zod.string(),
   "clientAddress": zod.string().nullish(),

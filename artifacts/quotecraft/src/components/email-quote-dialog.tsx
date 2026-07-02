@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import {
   Dialog,
@@ -12,12 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetBusinessProfile,
   useGetEmailTemplate,
-  useCreateQuote,
   useSendQuoteEmail,
   getGetBusinessProfileQueryKey,
   getGetEmailTemplateQueryKey,
@@ -66,7 +66,6 @@ export function EmailQuoteDialog({
   const { data: template } = useGetEmailTemplate({
     query: { retry: false, queryKey: getGetEmailTemplateQueryKey() },
   });
-  const createQuote = useCreateQuote();
   const sendEmail = useSendQuoteEmail();
 
   const [clientName, setClientName] = useState("");
@@ -80,8 +79,20 @@ export function EmailQuoteDialog({
   // template/profile load re-seed subject/body over the restored values.
   const draftRestoredRef = useRef(false);
 
+  const [, setLocation] = useLocation();
   const total = computeTotals(lineItems, settings).total;
   const businessName = profile?.businessName ?? "";
+  const ownEmail =
+    user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() ?? "";
+
+  // Profile-complete gate (Bug #23): a quote can only be emailed once the
+  // business profile has the details that appear on the branded PDF.
+  const profileMissing: string[] = [];
+  if (!profile?.businessName?.trim()) profileMissing.push("business name");
+  if (!profile?.mobile?.trim()) profileMissing.push("mobile");
+  if (!profile?.abn?.trim()) profileMissing.push("ABN");
+  if (!profile?.address?.trim()) profileMissing.push("address");
+  const profileIncomplete = profileMissing.length > 0;
 
   // Seed subject/body from the saved template (or defaults) with placeholders
   // resolved against the current client + quote whenever the dialog opens.
@@ -139,10 +150,15 @@ export function EmailQuoteDialog({
     switch (field) {
       case "clientName":
         return value.trim() ? null : "Client name is required";
-      case "clientEmail":
-        return value.trim() && /^\S+@\S+\.\S+$/.test(value.trim())
-          ? null
-          : "A valid client email is required";
+      case "clientEmail": {
+        const v = value.trim();
+        if (!v || !/^\S+@\S+\.\S+$/.test(v))
+          return "A valid client email is required";
+        // Self-email guard (Bug #20): don't email a quote to your own address.
+        if (ownEmail && v.toLowerCase() === ownEmail)
+          return "This is your own email address — enter your client's email instead.";
+        return null;
+      }
       case "subject":
         return value.trim() ? null : "Subject is required";
       case "body":
@@ -203,7 +219,9 @@ export function EmailQuoteDialog({
     return Object.keys(e).length === 0;
   };
 
-  const buildAttachment = (): { base64: string; filename: string } => {
+  const buildAttachment = (
+    clientLabel: string,
+  ): { base64: string; filename: string } => {
     const header: PdfHeader = {
       businessName,
       contactName: user?.fullName ?? "",
@@ -218,12 +236,12 @@ export function EmailQuoteDialog({
     const totals = computeTotals(lineItems, settings);
     const doc = buildPdf({
       header,
-      clientLabel: clientName.trim() || label,
+      clientLabel: clientLabel || label,
       lineItems,
       settings,
       totals,
     });
-    const filename = `quote-${(clientName || label || "quotecraft")
+    const filename = `quote-${(clientLabel || label || "quotecraft")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")}.pdf`;
@@ -231,6 +249,15 @@ export function EmailQuoteDialog({
   };
 
   const handleSend = () => {
+    // Profile-complete gate (Bug #23): block sending until the branded-PDF
+    // details exist, and point the user to Settings.
+    if (profileIncomplete) {
+      toast.error(`Complete your business profile first (${profileMissing.join(", ")})`);
+      onOpenChange(false);
+      setLocation("/settings");
+      return;
+    }
+
     const values = collectValues();
     if (!validate(values)) return;
 
@@ -241,58 +268,55 @@ export function EmailQuoteDialog({
       clientSuburb: values.clientSuburb.trim() || null,
     };
 
-    // Email is a gated action → first record the quote, then send with its id so
-    // the server can stamp sentAt and link the email record (§6.4, §11).
-    createQuote.mutate(
+    const { base64, filename } = buildAttachment(client.clientName);
+
+    // History is recorded only after a successful send (Bug #21): we hand the
+    // quote to the server, which creates it + the email record atomically once
+    // Resend confirms delivery. A failed send persists nothing.
+    sendEmail.mutate(
       {
-        data: buildQuoteRecord({
-          label: label || clientName,
-          lineItems,
-          settings,
-          source: "email",
-          client,
-        }),
+        data: {
+          quote: buildQuoteRecord({
+            label: label || client.clientName,
+            lineItems,
+            settings,
+            source: "email",
+            client,
+          }),
+          clientName: client.clientName,
+          clientEmail: client.clientEmail,
+          clientAddress: client.clientAddress,
+          clientSuburb: client.clientSuburb,
+          subject: values.subject.trim(),
+          body: values.body,
+          attachmentBase64: base64,
+          attachmentFilename: filename,
+        },
       },
       {
-        onSuccess: (quote) => {
+        onSuccess: () => {
+          clearDraft();
+          qc.invalidateQueries({ queryKey: getListEmailRecordsQueryKey() });
           qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
-          const { base64, filename } = buildAttachment();
-          sendEmail.mutate(
-            {
-              data: {
-                quoteId: quote.id,
-                clientName: client.clientName,
-                clientEmail: client.clientEmail,
-                clientAddress: client.clientAddress,
-                clientSuburb: client.clientSuburb,
-                subject: subject.trim(),
-                body,
-                attachmentBase64: base64,
-                attachmentFilename: filename,
-              },
-            },
-            {
-              onSuccess: () => {
-                clearDraft();
-                qc.invalidateQueries({
-                  queryKey: getListEmailRecordsQueryKey(),
-                });
-                qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
-                toast.success(`Quote emailed to ${client.clientName}`);
-                onOpenChange(false);
-                onSent?.();
-              },
-              onError: () =>
-                toast.error("Couldn't send the email. Please try again."),
-            },
-          );
+          toast.success(`Quote emailed to ${client.clientName}`);
+          onOpenChange(false);
+          onSent?.();
         },
-        onError: () => toast.error("Couldn't save the quote. Please try again."),
+        // Surface the server's mapped, client-safe reason (Bug #24). The API
+        // client throws an ApiError whose parsed JSON payload lives on `.data`.
+        onError: (err: unknown) => {
+          const data = (err as { data?: { error?: string } } | null)?.data;
+          const msg =
+            typeof data?.error === "string" && data.error.trim()
+              ? data.error
+              : "Couldn't send the email. Please try again.";
+          toast.error(msg);
+        },
       },
     );
   };
 
-  const pending = createQuote.isPending || sendEmail.isPending;
+  const pending = sendEmail.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -303,6 +327,32 @@ export function EmailQuoteDialog({
             The branded PDF is attached automatically.
           </DialogDescription>
         </DialogHeader>
+
+        {profileIncomplete && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1.5">
+              <p className="text-destructive font-medium">
+                Complete your business profile to email quotes.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Missing: {profileMissing.join(", ")}. These appear on the branded
+                PDF.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 mt-0.5"
+                onClick={() => {
+                  onOpenChange(false);
+                  setLocation("/settings");
+                }}
+              >
+                Go to Settings
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3.5 py-1">
           <div className="space-y-1.5">
@@ -425,7 +475,7 @@ export function EmailQuoteDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={pending}
+            disabled={pending || profileIncomplete}
             className="w-full sm:w-auto"
           >
             {pending ? (

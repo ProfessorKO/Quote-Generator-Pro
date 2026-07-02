@@ -890,6 +890,12 @@ components:
       properties:
         quoteId:
           type: ["integer", "null"]
+        quote:
+          description: >-
+            Quote to record only if the email is sent successfully. Provide this
+            (instead of quoteId) so the quote is never persisted for a failed
+            send.
+          $ref: "#/components/schemas/QuoteRecordInput"
         clientName:
           type: string
         clientEmail:

@@ -171,6 +171,8 @@ export interface EmailRecord {
 export interface SendQuoteEmailInput {
   /** @nullable */
   quoteId?: number | null;
+  /** Quote to record only if the email is sent successfully. Provide this (instead of quoteId) so the quote is never persisted for a failed send. */
+  quote?: QuoteRecordInput;
   clientName: string;
   clientEmail: string;
   /** @nullable */
