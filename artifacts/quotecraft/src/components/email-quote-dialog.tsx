@@ -152,12 +152,47 @@ export function EmailQuoteDialog({
     }
   };
 
-  const validate = () => {
+  // Read the live DOM values at submit. Browser address autocomplete (and some
+  // password managers) can inject values without firing change/blur events, so
+  // trusting React state alone drops autofilled fields (Bug #19). Reading the
+  // inputs directly captures whatever the user actually sees.
+  const collectValues = () => {
+    const domVal = (id: string, fallback: string) => {
+      const el = document.getElementById(id) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+      return el ? el.value : fallback;
+    };
+    const values = {
+      clientName: domVal("cl-name", clientName),
+      clientEmail: domVal("cl-email", clientEmail),
+      clientAddress: domVal("cl-address", clientAddress),
+      clientSuburb: domVal("cl-suburb", clientSuburb),
+      subject: domVal("cl-subject", subject),
+      body: domVal("cl-body", body),
+    };
+    // Sync state so the display stays consistent with what we submit.
+    setClientName(values.clientName);
+    setClientEmail(values.clientEmail);
+    setClientAddress(values.clientAddress);
+    setClientSuburb(values.clientSuburb);
+    setSubject(values.subject);
+    setBody(values.body);
+    return values;
+  };
+
+  const validate = (values: {
+    clientName: string;
+    clientEmail: string;
+    subject: string;
+    body: string;
+  }) => {
     const checks: Array<[string, string]> = [
-      ["clientName", clientName],
-      ["clientEmail", clientEmail],
-      ["subject", subject],
-      ["body", body],
+      ["clientName", values.clientName],
+      ["clientEmail", values.clientEmail],
+      ["subject", values.subject],
+      ["body", values.body],
     ];
     const e: Record<string, string> = {};
     for (const [field, value] of checks) {
@@ -196,13 +231,14 @@ export function EmailQuoteDialog({
   };
 
   const handleSend = () => {
-    if (!validate()) return;
+    const values = collectValues();
+    if (!validate(values)) return;
 
     const client = {
-      clientName: clientName.trim(),
-      clientEmail: clientEmail.trim(),
-      clientAddress: clientAddress.trim() || null,
-      clientSuburb: clientSuburb.trim() || null,
+      clientName: values.clientName.trim(),
+      clientEmail: values.clientEmail.trim(),
+      clientAddress: values.clientAddress.trim() || null,
+      clientSuburb: values.clientSuburb.trim() || null,
     };
 
     // Email is a gated action → first record the quote, then send with its id so
