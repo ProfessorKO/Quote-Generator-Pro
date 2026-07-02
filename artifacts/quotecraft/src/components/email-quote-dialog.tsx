@@ -318,6 +318,7 @@ export function EmailQuoteDialog({
                 id="cl-address"
                 value={clientAddress}
                 onChange={(e) => setClientAddress(e.target.value)}
+                onBlur={(e) => setClientAddress(e.target.value)}
               />
             </div>
             <div className="space-y-1.5 flex-1">
@@ -329,6 +330,7 @@ export function EmailQuoteDialog({
                 id="cl-suburb"
                 value={clientSuburb}
                 onChange={(e) => setClientSuburb(e.target.value)}
+                onBlur={(e) => setClientSuburb(e.target.value)}
               />
             </div>
           </div>
