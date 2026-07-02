@@ -52,7 +52,7 @@ export default function Home() {
   const restored = useMemo(() => {
     if (templateId) return null;
     try {
-      const raw = sessionStorage.getItem(RESTORE_KEY);
+      const raw = localStorage.getItem(RESTORE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
       const hasContent =
@@ -600,7 +600,7 @@ export default function Home() {
         toast.success("Template saved successfully");
         setSaveDialogOpen(false);
         // Bug #8 — the quote is now persisted server-side; drop the local draft.
-        try { sessionStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
+        try { localStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
         queryClient.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
         // Save is a gated action → also record the quote to history (§11).
         createQuote.mutate(
@@ -636,12 +636,12 @@ export default function Home() {
     const hasContent = description.trim() || lineItems.length > 0;
     try {
       if (hasContent) {
-        sessionStorage.setItem(
+        localStorage.setItem(
           RESTORE_KEY,
           JSON.stringify({ description, lineItems, settings, businessName, hasParsed })
         );
       } else {
-        sessionStorage.removeItem(RESTORE_KEY);
+        localStorage.removeItem(RESTORE_KEY);
       }
     } catch {
       /* storage unavailable */
@@ -650,7 +650,7 @@ export default function Home() {
 
   // Bug #8 — tell the user a previous in-progress quote was brought back.
   useEffect(() => {
-    if (restored) toast("Unsaved quote restored");
+    if (restored) toast.info("Draft restored");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

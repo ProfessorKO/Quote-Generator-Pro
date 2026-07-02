@@ -7,7 +7,7 @@ export interface PdfHeader {
   contactName: string;
   address: string;
   email: string;
-  mobile?: string; // already formatted "+61 4 XXXX XXXX", omitted if blank
+  mobile?: string; // already display-formatted "+61-04 XXXX XXXX", omitted if blank
   abn?: string; // 11 digits, omitted if blank
   acn?: string; // 9 digits, omitted if blank
 }

@@ -14,6 +14,7 @@ import { NumericInput } from "@/components/numeric-input";
 import { Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useFormDraft } from "@/hooks/use-form-draft";
 import {
   useUpdateTemplate,
   getListTemplatesQueryKey,
@@ -42,6 +43,23 @@ export function TemplateEditDialog({
     setLineItems(template.lineItems.map((it) => ({ ...it })));
     setSettings({ ...template.settings });
   }, [template]);
+
+  // Draft autosave (Bug #22). Declared after the seeding effect so a saved
+  // draft restores over the template-seeded values. Keyed per template.
+  const { clearDraft } = useFormDraft(
+    `quotecraft:draft:template-edit:${template?.id ?? "none"}`,
+    {
+      active: !!template,
+      // Never restore a draft older than the template's last server update.
+      ignoreBefore: template?.updatedAt ? Date.parse(template.updatedAt) : 0,
+      data: { name, lineItems, settings },
+      onRestore: (d) => {
+        if (typeof d.name === "string") setName(d.name);
+        if (Array.isArray(d.lineItems)) setLineItems(d.lineItems);
+        if (d.settings) setSettings(d.settings);
+      },
+    },
+  );
 
   if (!template || !settings) return null;
 
@@ -101,6 +119,7 @@ export function TemplateEditDialog({
       },
       {
         onSuccess: () => {
+          clearDraft();
           qc.invalidateQueries({ queryKey: getListTemplatesQueryKey() });
           toast.success("Template updated");
           onOpenChange(false);
@@ -260,7 +279,10 @@ export function TemplateEditDialog({
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
             className="w-full sm:w-auto"
           >
             Cancel

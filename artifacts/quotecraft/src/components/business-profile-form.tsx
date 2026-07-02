@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { MobileInput } from "@/components/mobile-input";
+import { useFormDraft } from "@/hooks/use-form-draft";
 import {
   useUpsertBusinessProfile,
   getGetBusinessProfileQueryKey,
@@ -16,7 +17,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   formatStoredMobile,
   mobileDigitsFromStored,
-  isValidMobileDigits,
+  mobileValidationError,
+  addressValidationError,
   sanitizeAbn,
   isValidAbn,
   sanitizeAcn,
@@ -27,6 +29,15 @@ interface BusinessProfileFormProps {
   initial?: BusinessProfile | null;
   submitLabel: string;
   onSaved?: (profile: BusinessProfile) => void;
+}
+
+interface ProfileDraft {
+  businessName: string;
+  mobile: string;
+  abn: string;
+  acn: string;
+  address: string;
+  marketingConsent: boolean;
 }
 
 export function BusinessProfileForm({
@@ -47,14 +58,68 @@ export function BusinessProfileForm({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { clearDraft } = useFormDraft<ProfileDraft>(
+    "quotecraft:draft:business-profile",
+    {
+      // Never restore a draft older than the saved profile (stale drafts must
+      // not override fresh server data in Settings).
+      ignoreBefore: initial?.updatedAt ? Date.parse(initial.updatedAt) : 0,
+      data: { businessName, mobile, abn, acn, address, marketingConsent },
+      isEmpty: (d) =>
+        !d.businessName && !d.mobile && !d.abn && !d.acn && !d.address,
+      onRestore: (d) => {
+        setBusinessName(d.businessName ?? "");
+        setMobile(d.mobile ?? "");
+        setAbn(sanitizeAbn(d.abn ?? ""));
+        setAcn(sanitizeAcn(d.acn ?? ""));
+        setAddress(d.address ?? "");
+        setMarketingConsent(d.marketingConsent ?? false);
+      },
+    },
+  );
+
+  const setFieldError = (field: string, message: string | null) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[field] = message;
+      else delete next[field];
+      return next;
+    });
+  };
+
+  // Field-level checks, run on blur (with the live DOM value, so browser
+  // autofill that never fired a change event is still validated correctly)
+  // and on submit. Typing clears the field's error (Bug #19).
+  const fieldError = (field: string, value: string): string | null => {
+    switch (field) {
+      case "businessName":
+        return value.trim() ? null : "Business name is required";
+      case "mobile":
+        return mobileValidationError(value, true);
+      case "abn":
+        return isValidAbn(value) ? null : "ABN must be 11 digits";
+      case "acn":
+        return value && !isValidAcn(value) ? "ACN must be 9 digits" : null;
+      case "address":
+        return addressValidationError(value);
+      default:
+        return null;
+    }
+  };
+
   const validate = () => {
+    const checks: Array<[string, string]> = [
+      ["businessName", businessName],
+      ["mobile", mobile],
+      ["abn", abn],
+      ["acn", acn],
+      ["address", address],
+    ];
     const e: Record<string, string> = {};
-    if (!businessName.trim()) e.businessName = "Business name is required";
-    if (!isValidMobileDigits(mobile))
-      e.mobile = "Enter the 8 digits after +61 4";
-    if (!isValidAbn(abn)) e.abn = "ABN must be 11 digits";
-    if (acn && !isValidAcn(acn)) e.acn = "ACN must be 9 digits";
-    if (!address.trim()) e.address = "Address is required";
+    for (const [field, value] of checks) {
+      const msg = fieldError(field, value);
+      if (msg) e[field] = msg;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -75,6 +140,7 @@ export function BusinessProfileForm({
       },
       {
         onSuccess: (profile) => {
+          clearDraft();
           qc.invalidateQueries({ queryKey: getGetBusinessProfileQueryKey() });
           toast.success("Business profile saved");
           onSaved?.(profile);
@@ -91,7 +157,14 @@ export function BusinessProfileForm({
         <Input
           id="businessName"
           value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
+          onChange={(e) => {
+            setBusinessName(e.target.value);
+            setFieldError("businessName", null);
+          }}
+          onBlur={(e) => {
+            setBusinessName(e.target.value);
+            setFieldError("businessName", fieldError("businessName", e.target.value));
+          }}
           placeholder="e.g. Smith Plumbing"
         />
         {errors.businessName && (
@@ -101,7 +174,19 @@ export function BusinessProfileForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="mobile">Mobile</Label>
-        <MobileInput id="mobile" value={mobile} onChange={setMobile} />
+        <MobileInput
+          id="mobile"
+          value={mobile}
+          invalid={!!errors.mobile}
+          onChange={(digits) => {
+            setMobile(digits);
+            setFieldError("mobile", null);
+          }}
+          onBlur={(digits) => {
+            setMobile(digits);
+            setFieldError("mobile", fieldError("mobile", digits));
+          }}
+        />
         {errors.mobile && (
           <p className="text-xs text-destructive">{errors.mobile}</p>
         )}
@@ -113,7 +198,15 @@ export function BusinessProfileForm({
           id="abn"
           inputMode="numeric"
           value={abn}
-          onChange={(e) => setAbn(sanitizeAbn(e.target.value))}
+          onChange={(e) => {
+            setAbn(sanitizeAbn(e.target.value));
+            setFieldError("abn", null);
+          }}
+          onBlur={(e) => {
+            const v = sanitizeAbn(e.target.value);
+            setAbn(v);
+            setFieldError("abn", fieldError("abn", v));
+          }}
           placeholder="11 digits"
         />
         {errors.abn && <p className="text-xs text-destructive">{errors.abn}</p>}
@@ -127,7 +220,15 @@ export function BusinessProfileForm({
           id="acn"
           inputMode="numeric"
           value={acn}
-          onChange={(e) => setAcn(sanitizeAcn(e.target.value))}
+          onChange={(e) => {
+            setAcn(sanitizeAcn(e.target.value));
+            setFieldError("acn", null);
+          }}
+          onBlur={(e) => {
+            const v = sanitizeAcn(e.target.value);
+            setAcn(v);
+            setFieldError("acn", fieldError("acn", v));
+          }}
           placeholder="9 digits"
         />
         {errors.acn && <p className="text-xs text-destructive">{errors.acn}</p>}
@@ -138,7 +239,14 @@ export function BusinessProfileForm({
         <Textarea
           id="address"
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          onChange={(e) => {
+            setAddress(e.target.value);
+            setFieldError("address", null);
+          }}
+          onBlur={(e) => {
+            setAddress(e.target.value);
+            setFieldError("address", fieldError("address", e.target.value));
+          }}
           placeholder="Street, suburb, state, postcode"
           rows={2}
         />

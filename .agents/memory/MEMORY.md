@@ -1,1 +1,2 @@
 - [Orval query options need queryKey](orval-querykey.md) — passing a `query` option object to generated useGet* hooks requires an explicit `queryKey` or tsc fails.
+- [Form drafts & validation](form-drafts-and-validation.md) — drafts mirroring server records need savedAt >= updatedAt guard; validate on blur from e.target.value (autofill-safe)

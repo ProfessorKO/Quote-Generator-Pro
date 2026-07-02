@@ -29,8 +29,10 @@ import { buildPdf, downloadPdf, type PdfHeader } from "@/lib/pdf";
 import { buildQuoteRecord, computeTotals } from "@/lib/quote-record";
 import {
   formatStoredMobile,
+  formatMobileDisplay,
   mobileDigitsFromStored,
-  isValidMobileDigits,
+  mobileValidationError,
+  addressValidationError,
   sanitizeAbn,
   isValidAbn,
   sanitizeAcn,
@@ -85,16 +87,54 @@ export function ExportPdfDialog({
     setErrors({});
   }, [open, profile, user]);
 
+  const setFieldError = (field: string, message: string | null) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[field] = message;
+      else delete next[field];
+      return next;
+    });
+  };
+
+  // Field-level checks, run on blur (with the live DOM value so browser
+  // autofill is validated correctly) and on submit. Typing clears the
+  // field's error (Bug #19).
+  const fieldError = (field: string, value: string): string | null => {
+    switch (field) {
+      case "contactName":
+        return value.trim() ? null : "Contact name is required";
+      case "businessName":
+        return value.trim() ? null : "Business name is required";
+      case "email":
+        return value.trim() ? null : "Email is required";
+      case "address":
+        return addressValidationError(value);
+      case "mobile":
+        return mobileValidationError(value, true);
+      case "abn":
+        return value && !isValidAbn(value) ? "ABN must be 11 digits" : null;
+      case "acn":
+        return value && !isValidAcn(value) ? "ACN must be 9 digits" : null;
+      default:
+        return null;
+    }
+  };
+
   const validate = () => {
+    const checks: Array<[string, string]> = [
+      ["contactName", contactName],
+      ["businessName", businessName],
+      ["email", email],
+      ["address", address],
+      ["mobile", mobile],
+      ["abn", abn],
+      ["acn", acn],
+    ];
     const e: Record<string, string> = {};
-    if (!contactName.trim()) e.contactName = "Contact name is required";
-    if (!businessName.trim()) e.businessName = "Business name is required";
-    if (!email.trim()) e.email = "Email is required";
-    if (!address.trim()) e.address = "Address is required";
-    if (mobile && !isValidMobileDigits(mobile))
-      e.mobile = "Enter all 8 digits, or leave blank";
-    if (abn && !isValidAbn(abn)) e.abn = "ABN must be 11 digits";
-    if (acn && !isValidAcn(acn)) e.acn = "ACN must be 9 digits";
+    for (const [field, value] of checks) {
+      const msg = fieldError(field, value);
+      if (msg) e[field] = msg;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -147,7 +187,7 @@ export function ExportPdfDialog({
       contactName: contactName.trim(),
       address: address.trim(),
       email: email.trim(),
-      mobile: mobile ? formatStoredMobile(mobile) : undefined,
+      mobile: mobile ? formatMobileDisplay(mobile) : undefined,
       abn: abn || undefined,
       acn: acn || undefined,
     };
@@ -202,7 +242,14 @@ export function ExportPdfDialog({
             <Input
               id="pdf-contact"
               value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
+              onChange={(e) => {
+                setContactName(e.target.value);
+                setFieldError("contactName", null);
+              }}
+              onBlur={(e) => {
+                setContactName(e.target.value);
+                setFieldError("contactName", fieldError("contactName", e.target.value));
+              }}
             />
             {errors.contactName && (
               <p className="text-xs text-destructive">{errors.contactName}</p>
@@ -214,7 +261,14 @@ export function ExportPdfDialog({
             <Input
               id="pdf-business"
               value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
+              onChange={(e) => {
+                setBusinessName(e.target.value);
+                setFieldError("businessName", null);
+              }}
+              onBlur={(e) => {
+                setBusinessName(e.target.value);
+                setFieldError("businessName", fieldError("businessName", e.target.value));
+              }}
             />
             {errors.businessName && (
               <p className="text-xs text-destructive">{errors.businessName}</p>
@@ -227,7 +281,14 @@ export function ExportPdfDialog({
               id="pdf-email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFieldError("email", null);
+              }}
+              onBlur={(e) => {
+                setEmail(e.target.value);
+                setFieldError("email", fieldError("email", e.target.value));
+              }}
             />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email}</p>
@@ -235,11 +296,20 @@ export function ExportPdfDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="pdf-mobile">
-              Mobile{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
-            </Label>
-            <MobileInput id="pdf-mobile" value={mobile} onChange={setMobile} />
+            <Label htmlFor="pdf-mobile">Mobile</Label>
+            <MobileInput
+              id="pdf-mobile"
+              value={mobile}
+              invalid={!!errors.mobile}
+              onChange={(digits) => {
+                setMobile(digits);
+                setFieldError("mobile", null);
+              }}
+              onBlur={(digits) => {
+                setMobile(digits);
+                setFieldError("mobile", fieldError("mobile", digits));
+              }}
+            />
             {errors.mobile && (
               <p className="text-xs text-destructive">{errors.mobile}</p>
             )}
@@ -251,7 +321,14 @@ export function ExportPdfDialog({
               id="pdf-address"
               rows={2}
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setFieldError("address", null);
+              }}
+              onBlur={(e) => {
+                setAddress(e.target.value);
+                setFieldError("address", fieldError("address", e.target.value));
+              }}
             />
             {errors.address && (
               <p className="text-xs text-destructive">{errors.address}</p>
@@ -268,7 +345,15 @@ export function ExportPdfDialog({
                 id="pdf-abn"
                 inputMode="numeric"
                 value={abn}
-                onChange={(e) => setAbn(sanitizeAbn(e.target.value))}
+                onChange={(e) => {
+                  setAbn(sanitizeAbn(e.target.value));
+                  setFieldError("abn", null);
+                }}
+                onBlur={(e) => {
+                  const v = sanitizeAbn(e.target.value);
+                  setAbn(v);
+                  setFieldError("abn", fieldError("abn", v));
+                }}
               />
               {errors.abn && (
                 <p className="text-xs text-destructive">{errors.abn}</p>
@@ -283,7 +368,15 @@ export function ExportPdfDialog({
                 id="pdf-acn"
                 inputMode="numeric"
                 value={acn}
-                onChange={(e) => setAcn(sanitizeAcn(e.target.value))}
+                onChange={(e) => {
+                  setAcn(sanitizeAcn(e.target.value));
+                  setFieldError("acn", null);
+                }}
+                onBlur={(e) => {
+                  const v = sanitizeAcn(e.target.value);
+                  setAcn(v);
+                  setFieldError("acn", fieldError("acn", v));
+                }}
               />
               {errors.acn && (
                 <p className="text-xs text-destructive">{errors.acn}</p>

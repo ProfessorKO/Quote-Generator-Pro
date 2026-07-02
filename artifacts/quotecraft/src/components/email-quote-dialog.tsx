@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/react";
 import {
   Dialog,
@@ -30,10 +30,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { buildPdf, pdfToBase64, type PdfHeader } from "@/lib/pdf";
 import { buildQuoteRecord, computeTotals } from "@/lib/quote-record";
 import {
-  formatStoredMobile,
+  formatMobileDisplay,
   mobileDigitsFromStored,
   formatCurrency,
 } from "@/lib/format";
+import { useFormDraft } from "@/hooks/use-form-draft";
 import {
   DEFAULT_EMAIL_SUBJECT,
   DEFAULT_EMAIL_BODY,
@@ -75,6 +76,9 @@ export function EmailQuoteDialog({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // When a draft was restored for this open-cycle, don't let the async
+  // template/profile load re-seed subject/body over the restored values.
+  const draftRestoredRef = useRef(false);
 
   const total = computeTotals(lineItems, settings).total;
   const businessName = profile?.businessName ?? "";
@@ -82,7 +86,11 @@ export function EmailQuoteDialog({
   // Seed subject/body from the saved template (or defaults) with placeholders
   // resolved against the current client + quote whenever the dialog opens.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      draftRestoredRef.current = false;
+      return;
+    }
+    if (draftRestoredRef.current) return;
     const values = {
       clientName,
       businessName,
@@ -97,13 +105,65 @@ export function EmailQuoteDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template, businessName]);
 
+  // Draft autosave (Bug #22). Declared after the seeding effect so a saved
+  // draft restores over the template-seeded subject/body.
+  const { clearDraft } = useFormDraft("quotecraft:draft:email-quote", {
+    active: open,
+    data: { clientName, clientEmail, clientAddress, clientSuburb, subject, body },
+    isEmpty: (d) =>
+      !d.clientName && !d.clientEmail && !d.clientAddress && !d.clientSuburb,
+    onRestore: (d) => {
+      draftRestoredRef.current = true;
+      setClientName(d.clientName ?? "");
+      setClientEmail(d.clientEmail ?? "");
+      setClientAddress(d.clientAddress ?? "");
+      setClientSuburb(d.clientSuburb ?? "");
+      if (d.subject) setSubject(d.subject);
+      if (d.body) setBody(d.body);
+    },
+  });
+
+  const setFieldError = (field: string, message: string | null) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (message) next[field] = message;
+      else delete next[field];
+      return next;
+    });
+  };
+
+  // Field-level checks, run on blur (with the live DOM value so browser
+  // autofill is validated correctly) and on submit. Typing clears the
+  // field's error (Bug #19).
+  const fieldError = (field: string, value: string): string | null => {
+    switch (field) {
+      case "clientName":
+        return value.trim() ? null : "Client name is required";
+      case "clientEmail":
+        return value.trim() && /^\S+@\S+\.\S+$/.test(value.trim())
+          ? null
+          : "A valid client email is required";
+      case "subject":
+        return value.trim() ? null : "Subject is required";
+      case "body":
+        return value.trim() ? null : "Message is required";
+      default:
+        return null;
+    }
+  };
+
   const validate = () => {
+    const checks: Array<[string, string]> = [
+      ["clientName", clientName],
+      ["clientEmail", clientEmail],
+      ["subject", subject],
+      ["body", body],
+    ];
     const e: Record<string, string> = {};
-    if (!clientName.trim()) e.clientName = "Client name is required";
-    if (!clientEmail.trim() || !/^\S+@\S+\.\S+$/.test(clientEmail))
-      e.clientEmail = "A valid client email is required";
-    if (!subject.trim()) e.subject = "Subject is required";
-    if (!body.trim()) e.body = "Message is required";
+    for (const [field, value] of checks) {
+      const msg = fieldError(field, value);
+      if (msg) e[field] = msg;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -115,7 +175,7 @@ export function EmailQuoteDialog({
       address: profile?.address ?? "",
       email: user?.primaryEmailAddress?.emailAddress ?? "",
       mobile: profile?.mobile
-        ? formatStoredMobile(mobileDigitsFromStored(profile.mobile))
+        ? formatMobileDisplay(mobileDigitsFromStored(profile.mobile))
         : undefined,
       abn: profile?.abn || undefined,
       acn: profile?.acn || undefined,
@@ -177,6 +237,7 @@ export function EmailQuoteDialog({
             },
             {
               onSuccess: () => {
+                clearDraft();
                 qc.invalidateQueries({
                   queryKey: getListEmailRecordsQueryKey(),
                 });
@@ -213,7 +274,14 @@ export function EmailQuoteDialog({
             <Input
               id="cl-name"
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              onChange={(e) => {
+                setClientName(e.target.value);
+                setFieldError("clientName", null);
+              }}
+              onBlur={(e) => {
+                setClientName(e.target.value);
+                setFieldError("clientName", fieldError("clientName", e.target.value));
+              }}
             />
             {errors.clientName && (
               <p className="text-xs text-destructive">{errors.clientName}</p>
@@ -226,7 +294,14 @@ export function EmailQuoteDialog({
               id="cl-email"
               type="email"
               value={clientEmail}
-              onChange={(e) => setClientEmail(e.target.value)}
+              onChange={(e) => {
+                setClientEmail(e.target.value);
+                setFieldError("clientEmail", null);
+              }}
+              onBlur={(e) => {
+                setClientEmail(e.target.value);
+                setFieldError("clientEmail", fieldError("clientEmail", e.target.value));
+              }}
             />
             {errors.clientEmail && (
               <p className="text-xs text-destructive">{errors.clientEmail}</p>
@@ -263,7 +338,14 @@ export function EmailQuoteDialog({
             <Input
               id="cl-subject"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setFieldError("subject", null);
+              }}
+              onBlur={(e) => {
+                setSubject(e.target.value);
+                setFieldError("subject", fieldError("subject", e.target.value));
+              }}
             />
             {errors.subject && (
               <p className="text-xs text-destructive">{errors.subject}</p>
@@ -276,7 +358,14 @@ export function EmailQuoteDialog({
               id="cl-body"
               rows={7}
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                setFieldError("body", null);
+              }}
+              onBlur={(e) => {
+                setBody(e.target.value);
+                setFieldError("body", fieldError("body", e.target.value));
+              }}
             />
             {errors.body && (
               <p className="text-xs text-destructive">{errors.body}</p>
@@ -287,7 +376,10 @@ export function EmailQuoteDialog({
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              clearDraft();
+              onOpenChange(false);
+            }}
             className="w-full sm:w-auto"
             disabled={pending}
           >
