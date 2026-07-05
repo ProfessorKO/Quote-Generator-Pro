@@ -15,6 +15,7 @@ export * from './emailTemplateInput';
 export * from './healthStatus';
 export * from './listEmailRecordsParams';
 export * from './listQuotesParams';
+export * from './nextQuoteSequence';
 export * from './openaiConversation';
 export * from './openaiConversationInput';
 export * from './openaiConversationWithMessages';

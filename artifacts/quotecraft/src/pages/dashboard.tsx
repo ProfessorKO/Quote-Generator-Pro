@@ -102,35 +102,60 @@ function FilterBar({
           </button>
         )}
       </div>
+      {/* Bug #17: every filter carries an always-visible label. */}
       <div className="grid grid-cols-2 gap-2">
-        <Input
-          placeholder="Client name"
-          value={filters.clientName}
-          onChange={(e) => setFilters({ ...filters, clientName: e.target.value })}
-          className="h-9"
-        />
-        <Input
-          placeholder="Client email"
-          value={filters.clientEmail}
-          onChange={(e) =>
-            setFilters({ ...filters, clientEmail: e.target.value })
-          }
-          className="h-9"
-        />
-        <Input
-          placeholder="Suburb"
-          value={filters.clientSuburb}
-          onChange={(e) =>
-            setFilters({ ...filters, clientSuburb: e.target.value })
-          }
-          className="h-9"
-        />
-        <Input
-          type="month"
-          value={filters.sentMonth}
-          onChange={(e) => setFilters({ ...filters, sentMonth: e.target.value })}
-          className="h-9"
-        />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Client name
+          </label>
+          <Input
+            placeholder="e.g. Sarah"
+            value={filters.clientName}
+            onChange={(e) =>
+              setFilters({ ...filters, clientName: e.target.value })
+            }
+            className="h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Client email
+          </label>
+          <Input
+            placeholder="e.g. sarah@mail.com"
+            value={filters.clientEmail}
+            onChange={(e) =>
+              setFilters({ ...filters, clientEmail: e.target.value })
+            }
+            className="h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Suburb
+          </label>
+          <Input
+            placeholder="e.g. Parramatta"
+            value={filters.clientSuburb}
+            onChange={(e) =>
+              setFilters({ ...filters, clientSuburb: e.target.value })
+            }
+            className="h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
+            Quote month
+          </label>
+          <Input
+            type="month"
+            value={filters.sentMonth}
+            onChange={(e) =>
+              setFilters({ ...filters, sentMonth: e.target.value })
+            }
+            className="h-9"
+          />
+        </div>
       </div>
     </div>
   );

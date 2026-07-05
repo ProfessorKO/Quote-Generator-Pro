@@ -19,10 +19,12 @@ import {
   useGetBusinessProfile,
   useGetEmailTemplate,
   useSendQuoteEmail,
+  useGetNextQuoteSequence,
   getGetBusinessProfileQueryKey,
   getGetEmailTemplateQueryKey,
   getListQuotesQueryKey,
   getListEmailRecordsQueryKey,
+  getGetNextQuoteSequenceQueryKey,
   type QuoteLineItem,
   type QuoteSettings,
 } from "@workspace/api-client-react";
@@ -35,6 +37,12 @@ import {
   formatCurrency,
 } from "@/lib/format";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import {
+  sanitizePdfFilename,
+  filenameValidationError,
+  buildEmailFilename,
+  MAX_FILENAME_CHARS,
+} from "@/lib/filename";
 import {
   DEFAULT_EMAIL_SUBJECT,
   DEFAULT_EMAIL_BODY,
@@ -68,13 +76,21 @@ export function EmailQuoteDialog({
   });
   const sendEmail = useSendQuoteEmail();
 
+  // Per-user, per-year sequence number for the filename convention (#28).
+  const { data: nextSeq } = useGetNextQuoteSequence({
+    query: { enabled: open, queryKey: getGetNextQuoteSequenceQueryKey() },
+  });
+
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientAddress, setClientAddress] = useState("");
   const [clientSuburb, setClientSuburb] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Once the user edits the filename, stop auto-regenerating it (#28).
+  const filenameDirtyRef = useRef(false);
   // When a draft was restored for this open-cycle, don't let the async
   // template/profile load re-seed subject/body over the restored values.
   const draftRestoredRef = useRef(false);
@@ -99,6 +115,7 @@ export function EmailQuoteDialog({
   useEffect(() => {
     if (!open) {
       draftRestoredRef.current = false;
+      filenameDirtyRef.current = false;
       return;
     }
     if (draftRestoredRef.current) return;
@@ -134,6 +151,19 @@ export function EmailQuoteDialog({
     },
   });
 
+  // Pre-populate the filename per convention until the user edits it (#28):
+  // Quote_{BusinessName}_{ClientName}_###
+  useEffect(() => {
+    if (!open || filenameDirtyRef.current) return;
+    setFilename(
+      buildEmailFilename(
+        businessName.trim(),
+        clientName.trim(),
+        nextSeq?.formatted ?? "001",
+      ),
+    );
+  }, [open, businessName, clientName, nextSeq]);
+
   const setFieldError = (field: string, message: string | null) => {
     setErrors((prev) => {
       const next = { ...prev };
@@ -163,6 +193,8 @@ export function EmailQuoteDialog({
         return value.trim() ? null : "Subject is required";
       case "body":
         return value.trim() ? null : "Message is required";
+      case "filename":
+        return filenameValidationError(value);
       default:
         return null;
     }
@@ -187,6 +219,7 @@ export function EmailQuoteDialog({
       clientSuburb: domVal("cl-suburb", clientSuburb),
       subject: domVal("cl-subject", subject),
       body: domVal("cl-body", body),
+      filename: domVal("cl-filename", filename),
     };
     // Sync state so the display stays consistent with what we submit.
     setClientName(values.clientName);
@@ -195,6 +228,7 @@ export function EmailQuoteDialog({
     setClientSuburb(values.clientSuburb);
     setSubject(values.subject);
     setBody(values.body);
+    setFilename(values.filename);
     return values;
   };
 
@@ -203,12 +237,14 @@ export function EmailQuoteDialog({
     clientEmail: string;
     subject: string;
     body: string;
+    filename: string;
   }) => {
     const checks: Array<[string, string]> = [
       ["clientName", values.clientName],
       ["clientEmail", values.clientEmail],
       ["subject", values.subject],
       ["body", values.body],
+      ["filename", values.filename],
     ];
     const e: Record<string, string> = {};
     for (const [field, value] of checks) {
@@ -221,6 +257,7 @@ export function EmailQuoteDialog({
 
   const buildAttachment = (
     clientLabel: string,
+    filenameInput: string,
   ): { base64: string; filename: string } => {
     const header: PdfHeader = {
       businessName,
@@ -241,11 +278,11 @@ export function EmailQuoteDialog({
       settings,
       totals,
     });
-    const filename = `quote-${(clientLabel || label || "quotecraft")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")}.pdf`;
-    return { base64: pdfToBase64(doc), filename };
+    // Editable, sanitized filename (#28).
+    return {
+      base64: pdfToBase64(doc),
+      filename: `${sanitizePdfFilename(filenameInput)}.pdf`,
+    };
   };
 
   const handleSend = () => {
@@ -268,7 +305,10 @@ export function EmailQuoteDialog({
       clientSuburb: values.clientSuburb.trim() || null,
     };
 
-    const { base64, filename } = buildAttachment(client.clientName);
+    const { base64, filename: attachmentFilename } = buildAttachment(
+      client.clientName,
+      values.filename,
+    );
 
     // History is recorded only after a successful send (Bug #21): we hand the
     // quote to the server, which creates it + the email record atomically once
@@ -290,7 +330,7 @@ export function EmailQuoteDialog({
           subject: values.subject.trim(),
           body: values.body,
           attachmentBase64: base64,
-          attachmentFilename: filename,
+          attachmentFilename,
         },
       },
       {
@@ -298,6 +338,7 @@ export function EmailQuoteDialog({
           clearDraft();
           qc.invalidateQueries({ queryKey: getListEmailRecordsQueryKey() });
           qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetNextQuoteSequenceQueryKey() });
           toast.success(`Quote emailed to ${client.clientName}`);
           onOpenChange(false);
           onSent?.();
@@ -438,6 +479,40 @@ export function EmailQuoteDialog({
             {errors.subject && (
               <p className="text-xs text-destructive">{errors.subject}</p>
             )}
+          </div>
+
+          {/* Editable attachment filename (#28) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cl-filename">Attachment filename</Label>
+            <Input
+              id="cl-filename"
+              value={filename}
+              maxLength={MAX_FILENAME_CHARS}
+              onChange={(e) => {
+                filenameDirtyRef.current = true;
+                setFilename(e.target.value);
+                setFieldError("filename", null);
+              }}
+              onBlur={(e) => {
+                setFilename(e.target.value);
+                setFieldError("filename", fieldError("filename", e.target.value));
+              }}
+            />
+            {errors.filename ? (
+              <p className="text-xs text-destructive">{errors.filename}</p>
+            ) : (
+              sanitizePdfFilename(filename) && (
+                <p className="text-xs text-muted-foreground">
+                  Will attach as{" "}
+                  <span className="font-medium text-foreground">
+                    {sanitizePdfFilename(filename)}.pdf
+                  </span>
+                </p>
+              )
+            )}
+            <p className="text-xs text-muted-foreground">
+              Suggested format: Quote_BusinessName_ClientName_###
+            </p>
           </div>
 
           <div className="space-y-1.5">

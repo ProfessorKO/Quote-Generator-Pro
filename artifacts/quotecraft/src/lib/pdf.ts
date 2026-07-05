@@ -23,6 +23,9 @@ export interface QuoteTotals {
 const FOOTER_MESSAGE =
   "Thank you for your business! We are looking forward to hearing from you!";
 
+// Bug #27: cap description length so a single item can't balloon the PDF.
+export const MAX_DESCRIPTION_CHARS = 500;
+
 const NAVY: [number, number, number] = [27, 44, 77];
 const AMBER: [number, number, number] = [242, 147, 13];
 const MUTED: [number, number, number] = [98, 109, 132];
@@ -95,42 +98,85 @@ export function buildPdf(params: {
   const colQty = right - 200;
   const colRate = right - 110;
   const colTotal = right;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  // Keep clear of the footer band.
+  const bottomLimit = pageHeight - 110;
+  const LINE_HEIGHT = 13;
 
-  doc.setFillColor(...NAVY);
-  doc.rect(marginX, y - 12, right - marginX, 22, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("DESCRIPTION", marginX + 8, y + 3);
-  doc.text("QTY", colQty, y + 3, { align: "right" });
-  doc.text("RATE", colRate, y + 3, { align: "right" });
-  doc.text("AMOUNT", colTotal - 8, y + 3, { align: "right" });
-  y += 22;
+  const drawTableHeader = () => {
+    doc.setFillColor(...NAVY);
+    doc.rect(marginX, y - 12, right - marginX, 22, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("DESCRIPTION", marginX + 8, y + 3);
+    doc.text("QTY", colQty, y + 3, { align: "right" });
+    doc.text("RATE", colRate, y + 3, { align: "right" });
+    doc.text("AMOUNT", colTotal - 8, y + 3, { align: "right" });
+    y += 22;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+  };
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(40, 40, 40);
+  // Bug #27: when a row (or its remaining description lines) can't fit on the
+  // current page, note the continuation and carry on atop a fresh page.
+  const continueOnNextPage = () => {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text("Continued on next page...", marginX + 8, bottomLimit + 14);
+    doc.addPage();
+    y = 56;
+    drawTableHeader();
+  };
+
+  drawTableHeader();
 
   lineItems.forEach((item, i) => {
-    if (y > doc.internal.pageSize.getHeight() - 120) {
-      doc.addPage();
-      y = 56;
+    // Bug #27: truncate overlong descriptions with an ellipsis.
+    let raw = (item.label || "Item").trim();
+    if (raw.length > MAX_DESCRIPTION_CHARS) {
+      raw = `${raw.slice(0, MAX_DESCRIPTION_CHARS)}...`;
     }
-    if (i % 2 === 1) {
+    const lines: string[] = doc.splitTextToSize(raw, colQty - marginX - 16);
+    const rowHeight = Math.max(20, (lines.length - 1) * LINE_HEIGHT + 20);
+
+    // Start the row on a new page if not even its first line fits.
+    if (y + 9 > bottomLimit) continueOnNextPage();
+
+    // Zebra stripe (only when the whole row fits on this page).
+    if (i % 2 === 1 && y - 11 + rowHeight <= bottomLimit) {
       doc.setFillColor(244, 246, 249);
-      doc.rect(marginX, y - 11, right - marginX, 20, "F");
+      doc.rect(marginX, y - 11, right - marginX, rowHeight, "F");
     }
+
     const rate = effectiveRate(item);
     const lineTotal = rate * item.quantity;
-    const label = doc.splitTextToSize(item.label || "Item", colQty - marginX - 16);
-    doc.text(label[0], marginX + 8, y + 3);
     doc.text(String(item.quantity), colQty, y + 3, { align: "right" });
     doc.text(money(rate), colRate, y + 3, { align: "right" });
     doc.text(money(lineTotal), colTotal - 8, y + 3, { align: "right" });
-    y += 20;
+
+    // Bug #27: render every wrapped description line, splitting across pages
+    // when a very long description exceeds the space remaining.
+    let lineY = y + 3;
+    for (const line of lines) {
+      if (lineY > bottomLimit) {
+        continueOnNextPage();
+        lineY = y + 3;
+      }
+      doc.text(line, marginX + 8, lineY);
+      lineY += LINE_HEIGHT;
+    }
+    y = lineY - LINE_HEIGHT + 17;
   });
 
   // ---- Totals ----
+  // Keep the totals block together; move it to a fresh page if it can't fit.
+  if (y + 130 > bottomLimit) {
+    doc.addPage();
+    y = 56;
+  }
   y += 12;
   const labelX = colRate;
   const valueX = colTotal - 8;

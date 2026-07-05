@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/react";
 import {
   Dialog,
@@ -19,14 +19,22 @@ import {
   useGetBusinessProfile,
   useUpsertBusinessProfile,
   useCreateQuote,
+  useGetNextQuoteSequence,
   getListQuotesQueryKey,
   getGetBusinessProfileQueryKey,
+  getGetNextQuoteSequenceQueryKey,
   type QuoteLineItem,
   type QuoteSettings,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildPdf, downloadPdf, type PdfHeader } from "@/lib/pdf";
 import { buildQuoteRecord, computeTotals } from "@/lib/quote-record";
+import {
+  sanitizePdfFilename,
+  filenameValidationError,
+  buildDownloadFilename,
+  MAX_FILENAME_CHARS,
+} from "@/lib/filename";
 import {
   formatStoredMobile,
   formatMobileDisplay,
@@ -72,7 +80,15 @@ export function ExportPdfDialog({
   const [address, setAddress] = useState("");
   const [abn, setAbn] = useState("");
   const [acn, setAcn] = useState("");
+  const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Once the user edits the filename, stop auto-regenerating it (#28).
+  const filenameDirtyRef = useRef(false);
+
+  // Per-user, per-year sequence number for the filename convention (#28).
+  const { data: nextSeq } = useGetNextQuoteSequence({
+    query: { enabled: open, queryKey: getGetNextQuoteSequenceQueryKey() },
+  });
 
   // (Re)seed from profile + Clerk whenever the dialog opens.
   useEffect(() => {
@@ -85,7 +101,20 @@ export function ExportPdfDialog({
     setAbn(sanitizeAbn(profile?.abn ?? ""));
     setAcn(sanitizeAcn(profile?.acn ?? ""));
     setErrors({});
+    filenameDirtyRef.current = false;
   }, [open, profile, user]);
+
+  // Pre-populate the filename per convention until the user edits it (#28):
+  // Quote_{BusinessName}_Download_{DownloadDate}_###
+  useEffect(() => {
+    if (!open || filenameDirtyRef.current) return;
+    setFilename(
+      buildDownloadFilename(
+        (businessName || profile?.businessName || "").trim(),
+        nextSeq?.formatted ?? "001",
+      ),
+    );
+  }, [open, businessName, profile, nextSeq]);
 
   const setFieldError = (field: string, message: string | null) => {
     setErrors((prev) => {
@@ -115,6 +144,8 @@ export function ExportPdfDialog({
         return value && !isValidAbn(value) ? "ABN must be 11 digits" : null;
       case "acn":
         return value && !isValidAcn(value) ? "ACN must be 9 digits" : null;
+      case "filename":
+        return filenameValidationError(value);
       default:
         return null;
     }
@@ -129,6 +160,7 @@ export function ExportPdfDialog({
       ["mobile", mobile],
       ["abn", abn],
       ["acn", acn],
+      ["filename", filename],
     ];
     const e: Record<string, string> = {};
     for (const [field, value] of checks) {
@@ -193,11 +225,8 @@ export function ExportPdfDialog({
     };
     const totals = computeTotals(lineItems, settings);
     const doc = buildPdf({ header, clientLabel: label, lineItems, settings, totals });
-    const filename = `quote-${(label || "quotecraft")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")}.pdf`;
-    downloadPdf(doc, filename);
+    // Editable, sanitized filename (#28).
+    downloadPdf(doc, `${sanitizePdfFilename(filename)}.pdf`);
 
     // Download is a gated action → record the quote to history (§11).
     createQuote.mutate(
@@ -212,6 +241,7 @@ export function ExportPdfDialog({
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetNextQuoteSequenceQueryKey() });
         },
         onError: () =>
           toast.error("PDF downloaded, but couldn't add it to your history"),
@@ -383,6 +413,50 @@ export function ExportPdfDialog({
               )}
             </div>
           </div>
+
+          {/* Editable PDF filename (#28) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="pdf-filename">Filename</Label>
+            <Input
+              id="pdf-filename"
+              value={filename}
+              maxLength={MAX_FILENAME_CHARS}
+              onChange={(e) => {
+                filenameDirtyRef.current = true;
+                setFilename(e.target.value);
+                setFieldError("filename", null);
+              }}
+              onBlur={(e) => {
+                setFilename(e.target.value);
+                setFieldError("filename", fieldError("filename", e.target.value));
+              }}
+            />
+            {errors.filename ? (
+              <p className="text-xs text-destructive">{errors.filename}</p>
+            ) : (
+              sanitizePdfFilename(filename) && (
+                <p className="text-xs text-muted-foreground">
+                  Will save as{" "}
+                  <span className="font-medium text-foreground">
+                    {sanitizePdfFilename(filename)}.pdf
+                  </span>
+                </p>
+              )
+            )}
+            <p className="text-xs text-muted-foreground">
+              Suggested format: Quote_BusinessName_Download_Date_###
+            </p>
+          </div>
+
+          {/* Quote total shown separately from the action button (#18) */}
+          <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5">
+            <span className="text-sm font-medium text-muted-foreground">
+              Quote Total
+            </span>
+            <span className="text-base font-bold text-primary">
+              {formatCurrency(total)}
+            </span>
+          </div>
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -395,7 +469,7 @@ export function ExportPdfDialog({
           </Button>
           <Button onClick={handleExport} className="w-full sm:w-auto">
             <Download className="w-4 h-4" />
-            Download ({formatCurrency(total)})
+            Download PDF
           </Button>
         </DialogFooter>
       </DialogContent>

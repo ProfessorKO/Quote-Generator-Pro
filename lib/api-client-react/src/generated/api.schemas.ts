@@ -141,6 +141,14 @@ export interface QuoteRecordInput {
   source: string;
 }
 
+export interface NextQuoteSequence {
+  year: number;
+  /** Next sequence number for this user and year (1-based) */
+  sequence: number;
+  /** Zero-padded 3-digit sequence, e.g. "001" */
+  formatted: string;
+}
+
 export interface EmailTemplate {
   id: number;
   subject: string;

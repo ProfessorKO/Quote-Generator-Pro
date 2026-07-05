@@ -167,6 +167,7 @@ export function TemplateEditDialog({
                 <div className="flex items-center gap-2">
                   <Input
                     value={item.label}
+                    maxLength={500}
                     onChange={(e) => updateItem(item.id, "label", e.target.value)}
                     className="h-9 flex-1"
                     placeholder="Item name"

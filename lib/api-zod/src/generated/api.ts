@@ -370,6 +370,16 @@ export const CreateQuoteBody = zod.object({
 
 
 /**
+ * @summary Next per-user quote sequence number for the current year (resets yearly)
+ */
+export const GetNextQuoteSequenceResponse = zod.object({
+  "year": zod.number(),
+  "sequence": zod.number().describe('Next sequence number for this user and year (1-based)'),
+  "formatted": zod.string().describe('Zero-padded 3-digit sequence, e.g. \"001\"')
+})
+
+
+/**
  * @summary Get a single quote from history
  */
 export const GetQuoteParams = zod.object({

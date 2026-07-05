@@ -6,6 +6,7 @@ import {
   GetQuoteParams,
   GetQuoteResponse,
   CreateQuoteBody,
+  GetNextQuoteSequenceResponse,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 
@@ -39,6 +40,36 @@ router.get("/quotes", requireAuth, async (req, res): Promise<void> => {
 
   res.json(ListQuotesResponse.parse(quotes));
 });
+
+// NOTE: must be registered before /quotes/:id so "next-sequence" isn't
+// parsed as a quote id.
+router.get(
+  "/quotes/next-sequence",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const userId = (req as AuthedRequest).userId;
+    const year = new Date().getFullYear();
+
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(quotesTable)
+      .where(
+        and(
+          eq(quotesTable.userId, userId),
+          sql`extract(year from ${quotesTable.createdAt}) = ${year}`,
+        ),
+      );
+
+    const sequence = (row?.count ?? 0) + 1;
+    res.json(
+      GetNextQuoteSequenceResponse.parse({
+        year,
+        sequence,
+        formatted: String(sequence).padStart(3, "0"),
+      }),
+    );
+  },
+);
 
 router.get("/quotes/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthedRequest).userId;

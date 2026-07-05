@@ -29,6 +29,7 @@ import type {
   HealthStatus,
   ListEmailRecordsParams,
   ListQuotesParams,
+  NextQuoteSequence,
   OpenaiConversation,
   OpenaiConversationInput,
   OpenaiConversationWithMessages,
@@ -949,6 +950,83 @@ export const useCreateQuote = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateQuoteMutationOptions(options));
     }
+
+export const getGetNextQuoteSequenceUrl = () => {
+
+
+
+
+  return `/api/quotes/next-sequence`
+}
+
+/**
+ * @summary Next per-user quote sequence number for the current year (resets yearly)
+ */
+export const getNextQuoteSequence = async ( options?: RequestInit): Promise<NextQuoteSequence> => {
+
+  return customFetch<NextQuoteSequence>(getGetNextQuoteSequenceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNextQuoteSequenceQueryKey = () => {
+    return [
+    `/api/quotes/next-sequence`
+    ] as const;
+    }
+
+
+export const getGetNextQuoteSequenceQueryOptions = <TData = Awaited<ReturnType<typeof getNextQuoteSequence>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextQuoteSequence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNextQuoteSequenceQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNextQuoteSequence>>> = ({ signal }) => getNextQuoteSequence({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNextQuoteSequence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNextQuoteSequenceQueryResult = NonNullable<Awaited<ReturnType<typeof getNextQuoteSequence>>>
+export type GetNextQuoteSequenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Next per-user quote sequence number for the current year (resets yearly)
+ */
+
+export function useGetNextQuoteSequence<TData = Awaited<ReturnType<typeof getNextQuoteSequence>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextQuoteSequence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNextQuoteSequenceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetQuoteUrl = (id: number,) => {
 

@@ -263,6 +263,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/QuoteRecord"
 
+  /quotes/next-sequence:
+    get:
+      operationId: getNextQuoteSequence
+      tags: [quotes]
+      summary: Next per-user quote sequence number for the current year (resets yearly)
+      responses:
+        "200":
+          description: Next sequence number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextQuoteSequence"
+
   /quotes/{id}:
     get:
       operationId: getQuote
@@ -820,6 +833,22 @@ components:
         - settings
         - total
         - source
+
+    NextQuoteSequence:
+      type: object
+      properties:
+        year:
+          type: integer
+        sequence:
+          type: integer
+          description: Next sequence number for this user and year (1-based)
+        formatted:
+          type: string
+          description: Zero-padded 3-digit sequence, e.g. "001"
+      required:
+        - year
+        - sequence
+        - formatted
 
     EmailTemplate:
       type: object
