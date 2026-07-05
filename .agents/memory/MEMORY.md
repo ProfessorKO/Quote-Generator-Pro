@@ -1,3 +1,4 @@
 - [Orval query options need queryKey](orval-querykey.md) — passing a `query` option object to generated useGet* hooks requires an explicit `queryKey` or tsc fails.
 - [Form drafts & validation](form-drafts-and-validation.md) — drafts mirroring server records need savedAt >= updatedAt guard; validate on blur from e.target.value (autofill-safe)
 - [API client error shape](api-client-error-shape.md) — the generated client throws ApiError with the parsed JSON body on err.data (NOT axios-style err.response.data); read err.data.error for server messages
+- [Resend connector settings server-side](resend-connector-settings.md) — SDK listConnections omits secret settings server-side; use the credential proxy with include_secrets=true.

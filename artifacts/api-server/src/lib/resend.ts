@@ -32,13 +32,39 @@ export class SendQuoteEmailError extends Error {
   }
 }
 
-async function getFromEmail(connectors: ReplitConnectors): Promise<string> {
-  const connections = await connectors.listConnections({
-    connector_names: "resend",
-  });
-  const settings = (connections[0] as { settings?: Record<string, unknown> })
-    ?.settings;
-  const fromEmail = settings?.from_email;
+// The connectors SDK's listConnections does NOT return credential settings
+// (from_email lives in secrets). Fetch them from the Replit credential proxy,
+// which is the canonical source for connection settings server-side.
+async function getFromEmail(): Promise<string> {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
+
+  if (!hostname || !xReplitToken) {
+    throw new SendQuoteEmailError(
+      "config",
+      "Replit connector environment is unavailable (missing hostname or identity token)",
+    );
+  }
+
+  const response = await fetch(
+    `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=resend`,
+    { headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken } },
+  );
+  if (!response.ok) {
+    throw new SendQuoteEmailError(
+      "config",
+      `Failed to fetch Resend connection settings (${response.status})`,
+    );
+  }
+
+  const data = (await response.json()) as {
+    items?: Array<{ settings?: Record<string, unknown> }>;
+  };
+  const fromEmail = data.items?.[0]?.settings?.from_email;
   if (typeof fromEmail !== "string" || !fromEmail) {
     throw new SendQuoteEmailError(
       "config",
@@ -58,6 +84,21 @@ function classifyResendFailure(
     return new SendQuoteEmailError(
       "rate_limited",
       `Resend rate limited (${status}): ${detail.slice(0, 300)}`,
+      status,
+    );
+  }
+  // Sender-side setup problems (unverified domain, testing-mode restriction)
+  // are config errors, not recipient errors. Resend returns 403 with messages
+  // like "The <domain> domain is not verified" or "You can only send testing
+  // emails to your own email address".
+  if (
+    lower.includes("not verified") ||
+    lower.includes("verify a domain") ||
+    lower.includes("testing emails")
+  ) {
+    return new SendQuoteEmailError(
+      "config",
+      `Resend sender not verified (${status}): ${detail.slice(0, 300)}`,
       status,
     );
   }
@@ -85,7 +126,7 @@ function classifyResendFailure(
 
 export async function sendQuoteEmail(params: SendEmailParams): Promise<void> {
   const connectors = new ReplitConnectors();
-  const fromEmail = await getFromEmail(connectors);
+  const fromEmail = await getFromEmail();
 
   const body: Record<string, unknown> = {
     from: `QuoteCraft <${fromEmail}>`,
