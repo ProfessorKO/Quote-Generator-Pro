@@ -32,10 +32,18 @@ export class SendQuoteEmailError extends Error {
   }
 }
 
+// Resend's default test sender. In development we always send from this
+// address (no domain verification needed). Note: Resend testing mode only
+// delivers to the email address registered on the Resend account.
+const RESEND_TEST_FROM = "onboarding@resend.dev";
+
 // The connectors SDK's listConnections does NOT return credential settings
 // (from_email lives in secrets). Fetch them from the Replit credential proxy,
 // which is the canonical source for connection settings server-side.
 async function getFromEmail(): Promise<string> {
+  if (process.env.NODE_ENV !== "production") {
+    return RESEND_TEST_FROM;
+  }
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY

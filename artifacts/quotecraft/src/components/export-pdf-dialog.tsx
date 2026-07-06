@@ -82,6 +82,7 @@ export function ExportPdfDialog({
   const [acn, setAcn] = useState("");
   const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generating, setGenerating] = useState(false);
   // Once the user edits the filename, stop auto-regenerating it (#28).
   const filenameDirtyRef = useRef(false);
 
@@ -211,8 +212,8 @@ export function ExportPdfDialog({
     });
   };
 
-  const handleExport = () => {
-    if (!validate()) return;
+  const handleExport = async () => {
+    if (!validate() || generating) return;
 
     const header: PdfHeader = {
       businessName: businessName.trim(),
@@ -224,34 +225,71 @@ export function ExportPdfDialog({
       acn: acn || undefined,
     };
     const totals = computeTotals(lineItems, settings);
-    const doc = buildPdf({ header, clientLabel: label, lineItems, settings, totals });
-    // Editable, sanitized filename (#28).
-    downloadPdf(doc, `${sanitizePdfFilename(filename)}.pdf`);
 
-    // Download is a gated action → record the quote to history (§11).
-    createQuote.mutate(
-      {
+    setGenerating(true);
+    try {
+      // Generate the PDF locally first — this works even fully offline. The
+      // browser then hands the file to the user (download/save location is up
+      // to the device).
+      const doc = buildPdf({ header, clientLabel: label, lineItems, settings, totals });
+      // Editable, sanitized filename (#28).
+      downloadPdf(doc, `${sanitizePdfFilename(filename)}.pdf`);
+
+      // Generating is a gated action → record the quote to history (§11) as
+      // part of the same action. Fallback: if the network is disconnected or
+      // the request times out, the PDF is still generated — we just tell the
+      // user history couldn't be saved.
+      const invalidateHistory = () => {
+        qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetNextQuoteSequenceQueryKey() });
+      };
+      let timedOut = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const savePromise = createQuote.mutateAsync({
         data: buildQuoteRecord({
           label: label || businessName,
           lineItems,
           settings,
           source: "download",
         }),
-      },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
-          qc.invalidateQueries({ queryKey: getGetNextQuoteSequenceQueryKey() });
-        },
-        onError: () =>
-          toast.error("PDF downloaded, but couldn't add it to your history"),
-      },
-    );
+      });
+      try {
+        await Promise.race([
+          savePromise,
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              timedOut = true;
+              reject(new Error("History save timed out"));
+            }, 10000);
+          }),
+        ]);
+        invalidateHistory();
+        toast.success("PDF generated and saved to history");
+      } catch {
+        toast.warning(
+          "PDF generated, but it couldn't be saved to your history. Check your connection — the PDF itself is safe on your device.",
+        );
+        // If the request eventually completes after the timeout, reconcile:
+        // the server did record it, so refresh history and let the user know.
+        savePromise
+          .then(() => {
+            if (!timedOut) return;
+            invalidateHistory();
+            toast.success("Connection recovered — quote saved to history");
+          })
+          .catch(() => {
+            // Already reported the failure above; nothing more to do.
+          });
+      } finally {
+        clearTimeout(timer);
+      }
 
-    toast.success("PDF downloaded");
-    onOpenChange(false);
-    onExported?.();
-    promptSaveOverride();
+      onOpenChange(false);
+      onExported?.();
+      promptSaveOverride();
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const total = computeTotals(lineItems, settings).total;
@@ -260,7 +298,7 @@ export function ExportPdfDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md w-[92vw] rounded-xl max-h-[88vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Download branded PDF</DialogTitle>
+          <DialogTitle>Generate branded PDF</DialogTitle>
           <DialogDescription>
             Pre-filled from your profile. Edit any field for this export.
           </DialogDescription>
@@ -467,9 +505,22 @@ export function ExportPdfDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleExport} className="w-full sm:w-auto">
-            <Download className="w-4 h-4" />
-            Download PDF
+          <Button
+            onClick={handleExport}
+            disabled={generating}
+            className="w-full sm:w-auto"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Generate PDF
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

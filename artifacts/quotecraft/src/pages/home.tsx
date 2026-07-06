@@ -910,7 +910,7 @@ export default function Home() {
                     className="h-12 text-base font-semibold"
                     onClick={() => handleGatedAction("download")}
                   >
-                    <Download className="w-5 h-5 mr-2" /> Download PDF
+                    <Download className="w-5 h-5 mr-2" /> Generate PDF
                   </Button>
                   <Button
                     variant="secondary"
