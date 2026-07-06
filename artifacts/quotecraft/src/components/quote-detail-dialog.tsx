@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/format";
 
 const sourceLabel: Record<string, string> = {
   save: "Saved",
-  download: "Downloaded",
+  download: "Generated",
   email: "Emailed",
 };
 

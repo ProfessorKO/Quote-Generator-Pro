@@ -49,7 +49,7 @@ const sourceMeta: Record<
   { icon: typeof SaveIcon; label: string }
 > = {
   save: { icon: SaveIcon, label: "Saved" },
-  download: { icon: FileDown, label: "Downloaded" },
+  download: { icon: FileDown, label: "Generated" },
   email: { icon: Mail, label: "Emailed" },
 };
 

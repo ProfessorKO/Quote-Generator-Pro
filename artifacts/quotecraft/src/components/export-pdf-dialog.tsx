@@ -228,23 +228,22 @@ export function ExportPdfDialog({
 
     setGenerating(true);
     try {
-      // Generate the PDF locally first — this works even fully offline. The
-      // browser then hands the file to the user (download/save location is up
-      // to the device).
+      // Build the PDF locally — this works even fully offline.
       const doc = buildPdf({ header, clientLabel: label, lineItems, settings, totals });
-      // Editable, sanitized filename (#28).
-      downloadPdf(doc, `${sanitizePdfFilename(filename)}.pdf`);
 
-      // Generating is a gated action → record the quote to history (§11) as
-      // part of the same action. Fallback: if the network is disconnected or
-      // the request times out, the PDF is still generated — we just tell the
-      // user history couldn't be saved.
+      // Record the quote to history (§11) BEFORE handing the file to the
+      // device. On mobile, doc.save() opens the PDF viewer / triggers a
+      // navigation that aborts any in-flight request — saving first ensures
+      // the history record actually reaches the server. Fallback: if the
+      // network is disconnected or the request times out (10s), the PDF is
+      // still generated — we just tell the user history couldn't be saved.
       const invalidateHistory = () => {
         qc.invalidateQueries({ queryKey: getListQuotesQueryKey() });
         qc.invalidateQueries({ queryKey: getGetNextQuoteSequenceQueryKey() });
       };
       let timedOut = false;
       let timer: ReturnType<typeof setTimeout> | undefined;
+      let historySaved = false;
       const savePromise = createQuote.mutateAsync({
         data: buildQuoteRecord({
           label: label || businessName,
@@ -263,12 +262,9 @@ export function ExportPdfDialog({
             }, 10000);
           }),
         ]);
+        historySaved = true;
         invalidateHistory();
-        toast.success("PDF generated and saved to history");
       } catch {
-        toast.warning(
-          "PDF generated, but it couldn't be saved to your history. Check your connection — the PDF itself is safe on your device.",
-        );
         // If the request eventually completes after the timeout, reconcile:
         // the server did record it, so refresh history and let the user know.
         savePromise
@@ -278,10 +274,23 @@ export function ExportPdfDialog({
             toast.success("Connection recovered — quote saved to history");
           })
           .catch(() => {
-            // Already reported the failure above; nothing more to do.
+            // Failure already reported below; nothing more to do.
           });
       } finally {
         clearTimeout(timer);
+      }
+
+      // Hand the file to the device (download / PDF viewer) — always happens,
+      // regardless of whether the history save succeeded. Editable, sanitized
+      // filename (#28).
+      downloadPdf(doc, `${sanitizePdfFilename(filename)}.pdf`);
+
+      if (historySaved) {
+        toast.success("PDF generated and saved to history");
+      } else {
+        toast.warning(
+          "PDF generated, but it couldn't be saved to your history. Check your connection — the PDF itself is safe on your device.",
+        );
       }
 
       onOpenChange(false);
