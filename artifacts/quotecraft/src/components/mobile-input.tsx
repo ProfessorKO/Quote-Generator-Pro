@@ -28,7 +28,7 @@ export function MobileInput({
         className,
       )}
     >
-      <span className="flex items-center px-3 bg-secondary text-secondary-foreground text-sm font-medium select-none border-r border-input">
+      <span className="flex items-center shrink-0 whitespace-nowrap min-w-[64px] px-3 bg-secondary text-secondary-foreground text-sm font-medium select-none border-r border-input">
         {MOBILE_PREFIX_DISPLAY}
       </span>
       <Input
@@ -41,7 +41,7 @@ export function MobileInput({
         aria-invalid={invalid || undefined}
         onChange={(e) => onChange(sanitizeMobileDigits(e.target.value))}
         onBlur={(e) => onBlur?.(sanitizeMobileDigits(e.target.value))}
-        className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+        className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none font-mono tracking-[0.15em] max-w-[160px]"
       />
     </div>
   );

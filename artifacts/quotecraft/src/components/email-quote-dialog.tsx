@@ -41,6 +41,7 @@ import {
   sanitizePdfFilename,
   filenameValidationError,
   buildEmailFilename,
+  buildQuoteNumber,
   MAX_FILENAME_CHARS,
 } from "@/lib/filename";
 import {
@@ -94,6 +95,10 @@ export function EmailQuoteDialog({
   // When a draft was restored for this open-cycle, don't let the async
   // template/profile load re-seed subject/body over the restored values.
   const draftRestoredRef = useRef(false);
+  // Once the user manually edits subject/body, stop auto-seeding them so the
+  // client-name re-seed (Bug #35) never clobbers their edits.
+  const subjectDirtyRef = useRef(false);
+  const bodyDirtyRef = useRef(false);
 
   const [, setLocation] = useLocation();
   const total = computeTotals(lineItems, settings).total;
@@ -111,11 +116,16 @@ export function EmailQuoteDialog({
   const profileIncomplete = profileMissing.length > 0;
 
   // Seed subject/body from the saved template (or defaults) with placeholders
-  // resolved against the current client + quote whenever the dialog opens.
+  // resolved against the current client + quote. Re-runs as the client name is
+  // typed so {{clientName}} reflects the actual name (Bug #35) — the "there"
+  // fallback only applies while the name is still empty. Never overwrites text
+  // the user has manually edited.
   useEffect(() => {
     if (!open) {
       draftRestoredRef.current = false;
       filenameDirtyRef.current = false;
+      subjectDirtyRef.current = false;
+      bodyDirtyRef.current = false;
       return;
     }
     if (draftRestoredRef.current) return;
@@ -124,14 +134,21 @@ export function EmailQuoteDialog({
       businessName,
       quoteTotal: formatCurrency(total),
     };
-    setSubject(
-      applyEmailPlaceholders(template?.subject ?? DEFAULT_EMAIL_SUBJECT, values),
-    );
-    setBody(applyEmailPlaceholders(template?.body ?? DEFAULT_EMAIL_BODY, values));
-    setErrors({});
-    // Intentionally seed once per open; further edits are user-driven.
+    if (!subjectDirtyRef.current) {
+      setSubject(
+        applyEmailPlaceholders(template?.subject ?? DEFAULT_EMAIL_SUBJECT, values),
+      );
+    }
+    if (!bodyDirtyRef.current) {
+      setBody(applyEmailPlaceholders(template?.body ?? DEFAULT_EMAIL_BODY, values));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, template, businessName]);
+  }, [open, template, businessName, clientName]);
+
+  // Reset field errors only on the open transition (not on every keystroke).
+  useEffect(() => {
+    if (open) setErrors({});
+  }, [open]);
 
   // Draft autosave (Bug #22). Declared after the seeding effect so a saved
   // draft restores over the template-seeded subject/body.
@@ -256,7 +273,6 @@ export function EmailQuoteDialog({
   };
 
   const buildAttachment = (
-    clientLabel: string,
     filenameInput: string,
   ): { base64: string; filename: string } => {
     const header: PdfHeader = {
@@ -273,7 +289,7 @@ export function EmailQuoteDialog({
     const totals = computeTotals(lineItems, settings);
     const doc = buildPdf({
       header,
-      clientLabel: clientLabel || label,
+      quoteNumber: buildQuoteNumber(nextSeq?.formatted ?? "001"),
       lineItems,
       settings,
       totals,
@@ -306,7 +322,6 @@ export function EmailQuoteDialog({
     };
 
     const { base64, filename: attachmentFilename } = buildAttachment(
-      client.clientName,
       values.filename,
     );
 
@@ -468,6 +483,7 @@ export function EmailQuoteDialog({
               id="cl-subject"
               value={subject}
               onChange={(e) => {
+                subjectDirtyRef.current = true;
                 setSubject(e.target.value);
                 setFieldError("subject", null);
               }}
@@ -522,6 +538,7 @@ export function EmailQuoteDialog({
               rows={7}
               value={body}
               onChange={(e) => {
+                bodyDirtyRef.current = true;
                 setBody(e.target.value);
                 setFieldError("body", null);
               }}

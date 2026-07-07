@@ -43,14 +43,17 @@ export default function Home() {
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const templateId = searchParams.get("templateId");
+  // Enhancement #36 — "New Quote" / "Try it now" navigate here with ?new=1 to
+  // start from a blank slate (no restored draft, empty description).
+  const isNewQuote = searchParams.get("new") === "1";
 
   const RESTORE_KEY = "quotecraft:unsaved-quote";
 
   // Bug #8 — restore an in-progress quote when returning to this page (e.g. after
   // visiting Templates). Skipped when a templateId is present, since that flow
-  // loads its own data. Runs once on mount.
+  // loads its own data, or when starting a fresh quote (#36). Runs once on mount.
   const restored = useMemo(() => {
-    if (templateId) return null;
+    if (templateId || isNewQuote) return null;
     try {
       const raw = localStorage.getItem(RESTORE_KEY);
       if (!raw) return null;
@@ -62,6 +65,16 @@ export default function Home() {
     } catch {
       return null;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Enhancement #36 — a fresh-start entry (?new=1) clears any saved draft so the
+  // description box is empty, then strips the flag so the normal draft-restore
+  // (Bug #8) resumes for later in-page navigation.
+  useEffect(() => {
+    if (!isNewQuote) return;
+    try { localStorage.removeItem(RESTORE_KEY); } catch { /* ignore */ }
+    setLocation("/quote", { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

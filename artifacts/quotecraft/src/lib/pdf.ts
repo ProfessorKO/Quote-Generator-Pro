@@ -39,12 +39,12 @@ const effectiveRate = (item: QuoteLineItem) =>
 
 export function buildPdf(params: {
   header: PdfHeader;
-  clientLabel?: string;
+  quoteNumber?: string;
   lineItems: QuoteLineItem[];
   settings: QuoteSettings;
   totals: QuoteTotals;
 }): jsPDF {
-  const { header, clientLabel, lineItems, settings, totals } = params;
+  const { header, quoteNumber, lineItems, settings, totals } = params;
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 48;
@@ -86,11 +86,13 @@ export function buildPdf(params: {
   doc.setFontSize(16);
   doc.text("QUOTE", marginX, y);
 
-  if (clientLabel) {
+  // Bug #32 — header shows only a clean Quote # reference (YYYY-MM-DD_###); the
+  // job description never appears on the PDF.
+  if (quoteNumber) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(...MUTED);
-    doc.text(clientLabel, right, y, { align: "right" });
+    doc.text(`Quote #: ${quoteNumber}`, right, y, { align: "right" });
   }
   y += 22;
 

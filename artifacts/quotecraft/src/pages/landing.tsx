@@ -37,7 +37,7 @@ const FEATURES = [
 export default function Landing() {
   const [, setLocation] = useLocation();
 
-  const startAsGuest = () => setLocation("/quote");
+  const startAsGuest = () => setLocation("/quote?new=1");
 
   const signIn = () => setLocation("/sign-in");
 

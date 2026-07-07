@@ -33,6 +33,7 @@ import {
   sanitizePdfFilename,
   filenameValidationError,
   buildDownloadFilename,
+  buildQuoteNumber,
   MAX_FILENAME_CHARS,
 } from "@/lib/filename";
 import {
@@ -229,7 +230,13 @@ export function ExportPdfDialog({
     setGenerating(true);
     try {
       // Build the PDF locally — this works even fully offline.
-      const doc = buildPdf({ header, clientLabel: label, lineItems, settings, totals });
+      const doc = buildPdf({
+        header,
+        quoteNumber: buildQuoteNumber(nextSeq?.formatted ?? "001"),
+        lineItems,
+        settings,
+        totals,
+      });
 
       // Record the quote to history (§11) BEFORE handing the file to the
       // device. On mobile, doc.save() opens the PDF viewer / triggers a

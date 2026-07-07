@@ -26,10 +26,19 @@ export function filenameValidationError(name: string): string | null {
   return null;
 }
 
-function isoDate(date: Date): string {
+export function isoDate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${m}-${d}`;
+}
+
+// Bug #32 — the reference printed on the PDF header: YYYY-MM-DD_### (### is the
+// per-user, per-year sequence). Replaces the old free-text description/label.
+export function buildQuoteNumber(
+  sequence: string,
+  date: Date = new Date(),
+): string {
+  return `${isoDate(date)}_${sequence || "001"}`;
 }
 
 export function buildDownloadFilename(

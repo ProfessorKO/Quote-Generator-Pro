@@ -104,7 +104,7 @@ function FilterBar({
       </div>
       {/* Bug #17: every filter carries an always-visible label. */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-muted-foreground">
             Client name
           </label>
@@ -117,7 +117,7 @@ function FilterBar({
             className="h-9"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-muted-foreground">
             Client email
           </label>
@@ -130,7 +130,7 @@ function FilterBar({
             className="h-9"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-muted-foreground">
             Suburb
           </label>
@@ -143,7 +143,7 @@ function FilterBar({
             className="h-9"
           />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1 min-w-0">
           <label className="text-xs font-medium text-muted-foreground">
             Quote month
           </label>
@@ -153,7 +153,7 @@ function FilterBar({
             onChange={(e) =>
               setFilters({ ...filters, sentMonth: e.target.value })
             }
-            className="h-9"
+            className="h-9 w-full min-w-0"
           />
         </div>
       </div>
@@ -238,7 +238,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             className="h-auto flex-col gap-1.5 py-3"
-            onClick={() => setLocation("/quote")}
+            onClick={() => setLocation("/quote?new=1")}
           >
             <Plus className="w-5 h-5 text-primary" />
             <span className="text-xs font-medium">New quote</span>
