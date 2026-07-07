@@ -149,23 +149,19 @@ export function EmailQuoteDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template, businessName]);
 
-  // Bug #35 — keep the client name in subject/body in sync as it changes, even
-  // after the user has edited that text. The fields normally hold the name
-  // already resolved (e.g. "Hi Jack,"), but the user may also re-type the
-  // literal {{clientName}} placeholder. Handle both: resolve any placeholder to
-  // the new name, and swap the previously applied name for the new one. This
-  // updates only the client name and preserves every other edit.
+  // Bug #35 — the subject/body fields hold {{clientName}} already resolved to
+  // the live name, so once the user edits them the dirty guards above stop the
+  // name from refreshing when the client name changes. Swap the previously
+  // applied name for the new one in place: this updates only the client name
+  // and preserves every other edit the user has made.
   useEffect(() => {
     if (!open) return;
     const prev = appliedClientNameRef.current;
     const nextName = clientName.trim() || "there";
-    const sync = (text: string) => {
-      let out = text.replace(/\{\{\s*clientName\s*\}\}/g, nextName);
-      if (prev && prev !== nextName) out = out.split(prev).join(nextName);
-      return out;
-    };
-    setSubject(sync);
-    setBody(sync);
+    if (prev && prev !== nextName) {
+      setSubject((s) => s.split(prev).join(nextName));
+      setBody((b) => b.split(prev).join(nextName));
+    }
     appliedClientNameRef.current = nextName;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, clientName]);
