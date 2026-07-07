@@ -99,6 +99,9 @@ export function EmailQuoteDialog({
   // client-name re-seed (Bug #35) never clobbers their edits.
   const subjectDirtyRef = useRef(false);
   const bodyDirtyRef = useRef(false);
+  // Bug #35 — the name currently rendered into subject/body, so a later name
+  // change can be swapped in place even after the user has edited the text.
+  const appliedClientNameRef = useRef("");
 
   const [, setLocation] = useLocation();
   const total = computeTotals(lineItems, settings).total;
@@ -116,16 +119,17 @@ export function EmailQuoteDialog({
   const profileIncomplete = profileMissing.length > 0;
 
   // Seed subject/body from the saved template (or defaults) with placeholders
-  // resolved against the current client + quote. Re-runs as the client name is
-  // typed so {{clientName}} reflects the actual name (Bug #35) — the "there"
-  // fallback only applies while the name is still empty. Never overwrites text
-  // the user has manually edited.
+  // resolved against the current client + quote when the dialog opens (or when
+  // the template/business details load). Never overwrites text the user has
+  // manually edited. Ongoing client-name changes are handled by the sync effect
+  // below (Bug #35) rather than a full re-seed, so user edits are preserved.
   useEffect(() => {
     if (!open) {
       draftRestoredRef.current = false;
       filenameDirtyRef.current = false;
       subjectDirtyRef.current = false;
       bodyDirtyRef.current = false;
+      appliedClientNameRef.current = "";
       return;
     }
     if (draftRestoredRef.current) return;
@@ -143,7 +147,24 @@ export function EmailQuoteDialog({
       setBody(applyEmailPlaceholders(template?.body ?? DEFAULT_EMAIL_BODY, values));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, template, businessName, clientName]);
+  }, [open, template, businessName]);
+
+  // Bug #35 — the subject/body fields hold {{clientName}} already resolved to
+  // the live name, so once the user edits them the dirty guards above stop the
+  // name from refreshing when the client name changes. Swap the previously
+  // applied name for the new one in place: this updates only the client name
+  // and preserves every other edit the user has made.
+  useEffect(() => {
+    if (!open) return;
+    const prev = appliedClientNameRef.current;
+    const nextName = clientName.trim() || "there";
+    if (prev && prev !== nextName) {
+      setSubject((s) => s.split(prev).join(nextName));
+      setBody((b) => b.split(prev).join(nextName));
+    }
+    appliedClientNameRef.current = nextName;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, clientName]);
 
   // Reset field errors only on the open transition (not on every keystroke).
   useEffect(() => {
