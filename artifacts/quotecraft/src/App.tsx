@@ -33,6 +33,7 @@ const Templates = lazy(() => import("@/pages/templates"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Settings = lazy(() => import("@/pages/settings"));
 const CompleteProfile = lazy(() => import("@/pages/complete-profile"));
+const Admin = lazy(() => import("@/pages/admin"));
 
 // REQUIRED — copy verbatim. Resolves the key from window.location.hostname.
 const clerkPubKey = publishableKeyFromHost(
@@ -250,6 +251,11 @@ function ClerkProviderWithRoutes() {
               <Route path="/settings">
                 <Protected>
                   <Settings />
+                </Protected>
+              </Route>
+              <Route path="/admin">
+                <Protected>
+                  <Admin />
                 </Protected>
               </Route>
               <Route component={NotFound} />

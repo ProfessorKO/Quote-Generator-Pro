@@ -295,6 +295,23 @@ export const UpsertBusinessProfileResponse = zod.object({
 
 
 /**
+ * Syncs the local user_profiles table from Clerk, then returns every registered user with email, sign-up method, registration/closure times, marketing consent, and their business names. Requires the signed-in user's email to be listed in the ADMIN_EMAILS environment variable.
+
+ * @summary Owner-only combined view of all registered users
+ */
+export const ListAdminUsersResponseItem = zod.object({
+  "userId": zod.string(),
+  "email": zod.string(),
+  "signupMethod": zod.string().nullable(),
+  "registeredAt": zod.coerce.date().nullable(),
+  "closedAt": zod.coerce.date().nullable(),
+  "marketingConsent": zod.boolean(),
+  "businesses": zod.array(zod.string())
+})
+export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
+
+
+/**
  * @summary List the current user's quote history with optional filters
  */
 export const ListQuotesQueryParams = zod.object({

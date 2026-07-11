@@ -209,6 +209,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/BusinessProfile"
 
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: Owner-only combined view of all registered users
+      description: >
+        Syncs the local user_profiles table from Clerk, then returns every
+        registered user with email, sign-up method, registration/closure
+        times, marketing consent, and their business names. Requires the
+        signed-in user's email to be listed in the ADMIN_EMAILS environment
+        variable.
+      responses:
+        "200":
+          description: All registered users with consent and businesses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /quotes:
     get:
       operationId: listQuotes
@@ -762,6 +789,36 @@ components:
         - abn
         - address
         - marketingConsent
+
+    AdminUser:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+        signupMethod:
+          type: ["string", "null"]
+        registeredAt:
+          type: ["string", "null"]
+          format: date-time
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        marketingConsent:
+          type: boolean
+        businesses:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - email
+        - signupMethod
+        - registeredAt
+        - closedAt
+        - marketingConsent
+        - businesses
 
     QuoteRecord:
       type: object

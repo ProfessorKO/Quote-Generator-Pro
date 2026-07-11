@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminUser';
 export * from './apiError';
 export * from './businessProfile';
 export * from './businessProfileInput';

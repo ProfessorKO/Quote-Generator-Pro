@@ -23,3 +23,8 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 packages = ["gut", "zip"]
+
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAILS = "cljay_0508@hotmail.com"

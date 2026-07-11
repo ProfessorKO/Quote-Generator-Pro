@@ -8,6 +8,7 @@ import quotesRouter from "./quotes";
 import emailTemplatesRouter from "./email-templates";
 import emailRecordsRouter from "./email-records";
 import sendQuoteEmailRouter from "./send-quote-email";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(quotesRouter);
 router.use(emailTemplatesRouter);
 router.use(emailRecordsRouter);
 router.use(sendQuoteEmailRouter);
+router.use(adminRouter);
 
 export default router;

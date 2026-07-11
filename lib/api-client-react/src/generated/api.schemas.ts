@@ -104,6 +104,19 @@ export interface BusinessProfileInput {
   marketingConsent: boolean;
 }
 
+export interface AdminUser {
+  userId: string;
+  email: string;
+  /** @nullable */
+  signupMethod: string | null;
+  /** @nullable */
+  registeredAt: string | null;
+  /** @nullable */
+  closedAt: string | null;
+  marketingConsent: boolean;
+  businesses: string[];
+}
+
 export interface QuoteRecord {
   id: number;
   label: string;

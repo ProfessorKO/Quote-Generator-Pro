@@ -1,5 +1,9 @@
-import { pgTable, serial, text, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, index } from "drizzle-orm/pg-core";
 
+// A user may own one or more businesses (1:many via user_id — the previous
+// unique constraint was dropped deliberately). `id` is the business's own
+// primary key. The user's identity (email, marketing consent) lives in
+// user_profiles; nothing user-level is duplicated here.
 export const businessProfilesTable = pgTable(
   "business_profiles",
   {
@@ -10,11 +14,10 @@ export const businessProfilesTable = pgTable(
     abn: text("abn").notNull(),
     acn: text("acn"),
     address: text("address").notNull(),
-    marketingConsent: boolean("marketing_consent").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("business_profiles_user_id_unique").on(table.userId)],
+  (table) => [index("business_profiles_user_id_idx").on(table.userId)],
 );
 
 export type BusinessProfile = typeof businessProfilesTable.$inferSelect;
