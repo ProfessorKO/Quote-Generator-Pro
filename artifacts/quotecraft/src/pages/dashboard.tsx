@@ -147,13 +147,18 @@ function FilterBar({
           <label className="text-xs font-medium text-muted-foreground">
             Quote month
           </label>
+          {/* Bug #30/#31: native month inputs keep an intrinsic width on
+              iOS/WebKit unless their appearance is reset, which made this
+              field overflow its grid cell. appearance-none + w-full/min-w-0
+              sizes it like the text filters, and the webkit pseudo-element
+              resets left-align the value to match them. */}
           <Input
             type="month"
             value={filters.sentMonth}
             onChange={(e) =>
               setFilters({ ...filters, sentMonth: e.target.value })
             }
-            className="h-9 w-full min-w-0"
+            className="h-9 w-full min-w-0 max-w-full appearance-none text-left [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
           />
         </div>
       </div>
