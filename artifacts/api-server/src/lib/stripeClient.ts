@@ -23,8 +23,10 @@ async function getStripeCredentials(): Promise<{
     );
   }
 
+  // Note: the connector_names filter does not reliably return the Stripe
+  // connection on this proxy, so fetch all connections and filter locally.
   const resp = await fetch(
-    `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=stripe`,
+    `https://${hostname}/api/v2/connection?include_secrets=true`,
     {
       headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken },
       signal: AbortSignal.timeout(10_000),
@@ -38,9 +40,13 @@ async function getStripeCredentials(): Promise<{
   }
 
   const data = await resp.json();
-  const settings = data.items?.[0]?.settings;
+  const stripeItem = (data.items ?? []).find(
+    (item: { connector_name?: string }) => item.connector_name === "stripe",
+  );
+  const settings = stripeItem?.settings;
+  const secretKey = settings?.secret_key ?? settings?.secret;
 
-  if (!settings?.secret_key) {
+  if (!secretKey) {
     throw new Error(
       "Stripe integration not connected or missing secret key. " +
         "Connect Stripe via the Integrations tab first.",
@@ -48,8 +54,8 @@ async function getStripeCredentials(): Promise<{
   }
 
   return {
-    secretKey: settings.secret_key,
-    webhookSecret: settings.webhook_secret,
+    secretKey,
+    webhookSecret: settings?.webhook_secret,
   };
 }
 
