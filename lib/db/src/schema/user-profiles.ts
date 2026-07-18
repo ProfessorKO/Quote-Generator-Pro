@@ -16,6 +16,10 @@ export const userProfilesTable = pgTable("user_profiles", {
   registeredAt: timestamp("registered_at", { withTimezone: true }),
   // Set when the account no longer exists in Clerk (deleted/closed).
   closedAt: timestamp("closed_at", { withTimezone: true }),
+  // Stripe references — the actual customer/subscription records live in
+  // Stripe (mirrored into the stripe.* schema by stripe-replit-sync).
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
