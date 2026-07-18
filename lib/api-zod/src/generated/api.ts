@@ -633,3 +633,85 @@ export const GenerateOpenaiImageResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the current user's plan, credits, usage and catalog
+ */
+export const GetBillingStatusResponse = zod.object({
+  "plan": zod.enum(['pro', 'free']),
+  "cancelAtPeriodEnd": zod.boolean(),
+  "currentPeriodEnd": zod.string().nullish(),
+  "credits": zod.number(),
+  "usage": zod.object({
+  "newQuotes": zod.number(),
+  "voiceEdits": zod.number(),
+  "emailsSent": zod.number(),
+  "pdfDownloads": zod.number()
+}),
+  "limits": zod.object({
+  "templates": zod.number(),
+  "newQuotes": zod.number(),
+  "voiceEdits": zod.number(),
+  "emailsSent": zod.number(),
+  "pdfDownloads": zod.number()
+}),
+  "templatesCount": zod.number(),
+  "creditPacks": zod.array(zod.object({
+  "credits": zod.number(),
+  "priceId": zod.string(),
+  "unitAmount": zod.number().describe('Price in cents (AUD)'),
+  "currency": zod.string()
+}))
+})
+
+
+/**
+ * @summary Start a Stripe Checkout session (Pro subscription or credit pack)
+ */
+export const CreateBillingCheckoutBody = zod.object({
+  "type": zod.enum(['subscription', 'credits']),
+  "credits": zod.number().optional().describe('Pack size (10, 20, 50 or 100) when type is credits')
+})
+
+export const CreateBillingCheckoutResponse = zod.object({
+  "url": zod.string().nullish(),
+  "resumed": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Confirm a completed Checkout session (idempotent fulfillment)
+ */
+export const ConfirmBillingCheckoutBody = zod.object({
+  "sessionId": zod.string()
+})
+
+export const ConfirmBillingCheckoutResponse = zod.object({
+  "result": zod.enum(['subscription_active', 'credits_added']),
+  "creditsAdded": zod.number().optional(),
+  "credits": zod.number().optional()
+})
+
+
+/**
+ * @summary Cancel the Pro subscription at the end of the billing period
+ */
+export const CancelBillingSubscriptionBody = zod.object({
+  "reason": zod.string().optional()
+})
+
+export const CancelBillingSubscriptionResponse = zod.object({
+  "result": zod.string(),
+  "currentPeriodEnd": zod.string().nullish()
+})
+
+
+/**
+ * @summary Authorize and record one PDF download (consumes quota or credit)
+ */
+export const ConsumePdfDownloadResponse = zod.object({
+  "allowed": zod.boolean(),
+  "source": zod.enum(['pro', 'credit', 'free']),
+  "creditsRemaining": zod.number().optional()
+})
+
+

@@ -37,6 +37,8 @@ import {
   formatCurrency,
 } from "@/lib/format";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import { LimitDialog } from "@/components/billing/limit-dialog";
+import { limitReachedAction, type LimitAction } from "@/lib/billing";
 import {
   sanitizePdfFilename,
   filenameValidationError,
@@ -90,6 +92,8 @@ export function EmailQuoteDialog({
   const [body, setBody] = useState("");
   const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // CP3 — free-tier email limit reached (402 from send).
+  const [limitAction, setLimitAction] = useState<LimitAction | null>(null);
   // Once the user edits the filename, stop auto-regenerating it (#28).
   const filenameDirtyRef = useRef(false);
   // When a draft was restored for this open-cycle, don't let the async
@@ -382,6 +386,12 @@ export function EmailQuoteDialog({
         // Surface the server's mapped, client-safe reason (Bug #24). The API
         // client throws an ApiError whose parsed JSON payload lives on `.data`.
         onError: (err: unknown) => {
+          // CP3 — free email limit reached: show the upgrade dialog instead
+          // of a plain error toast.
+          if (limitReachedAction(err)) {
+            setLimitAction("emailsSent");
+            return;
+          }
           const data = (err as { data?: { error?: string } } | null)?.data;
           const msg =
             typeof data?.error === "string" && data.error.trim()
@@ -600,6 +610,10 @@ export function EmailQuoteDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <LimitDialog
+        action={limitAction}
+        onOpenChange={(o) => !o && setLimitAction(null)}
+      />
     </Dialog>
   );
 }

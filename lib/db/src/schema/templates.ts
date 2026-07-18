@@ -7,6 +7,9 @@ export const templatesTable = pgTable(
   "templates",
   {
     id: serial("id").primaryKey(),
+    // Owner of the template. Templates are per-user: the free tier allows 5
+    // templates per user, so ownership is required for limit enforcement.
+    userId: text("user_id").notNull(),
     name: text("name").notNull(),
     businessDescription: text("business_description").notNull(),
     lineItems: jsonb("line_items").notNull().$type<LineItem[]>(),
@@ -15,9 +18,13 @@ export const templatesTable = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    // Enforce globally unique, case-insensitive template names at the DB level
-    // so concurrent requests cannot both pass the application-level pre-check.
-    uniqueIndex("templates_name_lower_unique").on(sql`lower(${table.name})`),
+    // Enforce per-user unique, case-insensitive template names at the DB
+    // level so concurrent requests cannot both pass the application-level
+    // pre-check.
+    uniqueIndex("templates_user_name_lower_unique").on(
+      table.userId,
+      sql`lower(${table.name})`,
+    ),
   ],
 );
 

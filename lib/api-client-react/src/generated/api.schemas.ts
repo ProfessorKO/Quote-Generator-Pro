@@ -5,6 +5,104 @@
  * QuoteCraft API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface UsageSnapshot {
+  newQuotes: number;
+  voiceEdits: number;
+  emailsSent: number;
+  pdfDownloads: number;
+}
+
+export interface FreeLimits {
+  templates: number;
+  newQuotes: number;
+  voiceEdits: number;
+  emailsSent: number;
+  pdfDownloads: number;
+}
+
+export interface CreditPack {
+  credits: number;
+  priceId: string;
+  /** Price in cents (AUD) */
+  unitAmount: number;
+  currency: string;
+}
+
+export type BillingStatusPlan = typeof BillingStatusPlan[keyof typeof BillingStatusPlan];
+
+
+export const BillingStatusPlan = {
+  pro: 'pro',
+  free: 'free',
+} as const;
+
+export interface BillingStatus {
+  plan: BillingStatusPlan;
+  cancelAtPeriodEnd: boolean;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  credits: number;
+  usage: UsageSnapshot;
+  limits: FreeLimits;
+  templatesCount: number;
+  creditPacks: CreditPack[];
+}
+
+export type BillingCheckoutInputType = typeof BillingCheckoutInputType[keyof typeof BillingCheckoutInputType];
+
+
+export const BillingCheckoutInputType = {
+  subscription: 'subscription',
+  credits: 'credits',
+} as const;
+
+export interface BillingCheckoutInput {
+  type: BillingCheckoutInputType;
+  /** Pack size (10, 20, 50 or 100) when type is credits */
+  credits?: number;
+}
+
+export interface BillingCheckoutResult {
+  /** @nullable */
+  url?: string | null;
+  resumed?: boolean;
+}
+
+export interface BillingConfirmInput {
+  sessionId: string;
+}
+
+export interface BillingCancelInput {
+  reason?: string;
+}
+
+export type BillingConfirmResultResult = typeof BillingConfirmResultResult[keyof typeof BillingConfirmResultResult];
+
+
+export const BillingConfirmResultResult = {
+  subscription_active: 'subscription_active',
+  credits_added: 'credits_added',
+} as const;
+
+export interface BillingConfirmResult {
+  result: BillingConfirmResultResult;
+  creditsAdded?: number;
+  credits?: number;
+}
+
+export type LimitReachedErrorCode = typeof LimitReachedErrorCode[keyof typeof LimitReachedErrorCode];
+
+
+export const LimitReachedErrorCode = {
+  LIMIT_REACHED: 'LIMIT_REACHED',
+} as const;
+
+export interface LimitReachedError {
+  error: string;
+  code: LimitReachedErrorCode;
+  action: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -280,5 +378,26 @@ clientSuburb?: string;
  * Filter by sent month in YYYY-MM format
  */
 sentMonth?: string;
+};
+
+export type CancelBillingSubscription200 = {
+  result: string;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+};
+
+export type ConsumePdfDownload200Source = typeof ConsumePdfDownload200Source[keyof typeof ConsumePdfDownload200Source];
+
+
+export const ConsumePdfDownload200Source = {
+  pro: 'pro',
+  credit: 'credit',
+  free: 'free',
+} as const;
+
+export type ConsumePdfDownload200 = {
+  allowed: boolean;
+  source: ConsumePdfDownload200Source;
+  creditsRemaining?: number;
 };
 

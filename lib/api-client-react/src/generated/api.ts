@@ -22,12 +22,21 @@ import type {
 import type {
   AdminUser,
   ApiError,
+  BillingCancelInput,
+  BillingCheckoutInput,
+  BillingCheckoutResult,
+  BillingConfirmInput,
+  BillingConfirmResult,
+  BillingStatus,
   BusinessProfile,
   BusinessProfileInput,
+  CancelBillingSubscription200,
+  ConsumePdfDownload200,
   EmailRecord,
   EmailTemplate,
   EmailTemplateInput,
   HealthStatus,
+  LimitReachedError,
   ListEmailRecordsParams,
   ListQuotesParams,
   NextQuoteSequence,
@@ -2001,5 +2010,365 @@ export const useGenerateOpenaiImage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getGenerateOpenaiImageMutationOptions(options));
+    }
+
+export const getGetBillingStatusUrl = () => {
+
+
+
+
+  return `/api/billing/status`
+}
+
+/**
+ * @summary Get the current user's plan, credits, usage and catalog
+ */
+export const getBillingStatus = async ( options?: RequestInit): Promise<BillingStatus> => {
+
+  return customFetch<BillingStatus>(getGetBillingStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBillingStatusQueryKey = () => {
+    return [
+    `/api/billing/status`
+    ] as const;
+    }
+
+
+export const getGetBillingStatusQueryOptions = <TData = Awaited<ReturnType<typeof getBillingStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBillingStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBillingStatus>>> = ({ signal }) => getBillingStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBillingStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBillingStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getBillingStatus>>>
+export type GetBillingStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current user's plan, credits, usage and catalog
+ */
+
+export function useGetBillingStatus<TData = Awaited<ReturnType<typeof getBillingStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBillingStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBillingStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBillingCheckoutUrl = () => {
+
+
+
+
+  return `/api/billing/checkout`
+}
+
+/**
+ * @summary Start a Stripe Checkout session (Pro subscription or credit pack)
+ */
+export const createBillingCheckout = async (billingCheckoutInput: BillingCheckoutInput, options?: RequestInit): Promise<BillingCheckoutResult> => {
+
+  return customFetch<BillingCheckoutResult>(getCreateBillingCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      billingCheckoutInput,)
+  }
+);}
+
+
+
+
+export const getCreateBillingCheckoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCheckout>>, TError,{data: BodyType<BillingCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBillingCheckout>>, TError,{data: BodyType<BillingCheckoutInput>}, TContext> => {
+
+const mutationKey = ['createBillingCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBillingCheckout>>, {data: BodyType<BillingCheckoutInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBillingCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBillingCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createBillingCheckout>>>
+    export type CreateBillingCheckoutMutationBody = BodyType<BillingCheckoutInput>
+    export type CreateBillingCheckoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Start a Stripe Checkout session (Pro subscription or credit pack)
+ */
+export const useCreateBillingCheckout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBillingCheckout>>, TError,{data: BodyType<BillingCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBillingCheckout>>,
+        TError,
+        {data: BodyType<BillingCheckoutInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBillingCheckoutMutationOptions(options));
+    }
+
+export const getConfirmBillingCheckoutUrl = () => {
+
+
+
+
+  return `/api/billing/confirm`
+}
+
+/**
+ * @summary Confirm a completed Checkout session (idempotent fulfillment)
+ */
+export const confirmBillingCheckout = async (billingConfirmInput: BillingConfirmInput, options?: RequestInit): Promise<BillingConfirmResult> => {
+
+  return customFetch<BillingConfirmResult>(getConfirmBillingCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      billingConfirmInput,)
+  }
+);}
+
+
+
+
+export const getConfirmBillingCheckoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmBillingCheckout>>, TError,{data: BodyType<BillingConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmBillingCheckout>>, TError,{data: BodyType<BillingConfirmInput>}, TContext> => {
+
+const mutationKey = ['confirmBillingCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmBillingCheckout>>, {data: BodyType<BillingConfirmInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmBillingCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmBillingCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof confirmBillingCheckout>>>
+    export type ConfirmBillingCheckoutMutationBody = BodyType<BillingConfirmInput>
+    export type ConfirmBillingCheckoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Confirm a completed Checkout session (idempotent fulfillment)
+ */
+export const useConfirmBillingCheckout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmBillingCheckout>>, TError,{data: BodyType<BillingConfirmInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmBillingCheckout>>,
+        TError,
+        {data: BodyType<BillingConfirmInput>},
+        TContext
+      > => {
+      return useMutation(getConfirmBillingCheckoutMutationOptions(options));
+    }
+
+export const getCancelBillingSubscriptionUrl = () => {
+
+
+
+
+  return `/api/billing/cancel`
+}
+
+/**
+ * @summary Cancel the Pro subscription at the end of the billing period
+ */
+export const cancelBillingSubscription = async (billingCancelInput?: BillingCancelInput, options?: RequestInit): Promise<CancelBillingSubscription200> => {
+
+  return customFetch<CancelBillingSubscription200>(getCancelBillingSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      billingCancelInput,)
+  }
+);}
+
+
+
+
+export const getCancelBillingSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,{data?: BodyType<BillingCancelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,{data?: BodyType<BillingCancelInput>}, TContext> => {
+
+const mutationKey = ['cancelBillingSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelBillingSubscription>>, {data?: BodyType<BillingCancelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cancelBillingSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelBillingSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof cancelBillingSubscription>>>
+    export type CancelBillingSubscriptionMutationBody = BodyType<BillingCancelInput> | undefined
+    export type CancelBillingSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel the Pro subscription at the end of the billing period
+ */
+export const useCancelBillingSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelBillingSubscription>>, TError,{data?: BodyType<BillingCancelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelBillingSubscription>>,
+        TError,
+        {data?: BodyType<BillingCancelInput>},
+        TContext
+      > => {
+      return useMutation(getCancelBillingSubscriptionMutationOptions(options));
+    }
+
+export const getConsumePdfDownloadUrl = () => {
+
+
+
+
+  return `/api/usage/pdf-download`
+}
+
+/**
+ * @summary Authorize and record one PDF download (consumes quota or credit)
+ */
+export const consumePdfDownload = async ( options?: RequestInit): Promise<ConsumePdfDownload200> => {
+
+  return customFetch<ConsumePdfDownload200>(getConsumePdfDownloadUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getConsumePdfDownloadMutationOptions = <TError = ErrorType<LimitReachedError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumePdfDownload>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof consumePdfDownload>>, TError,void, TContext> => {
+
+const mutationKey = ['consumePdfDownload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof consumePdfDownload>>, void> = () => {
+
+
+          return  consumePdfDownload(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConsumePdfDownloadMutationResult = NonNullable<Awaited<ReturnType<typeof consumePdfDownload>>>
+
+    export type ConsumePdfDownloadMutationError = ErrorType<LimitReachedError>
+
+    /**
+ * @summary Authorize and record one PDF download (consumes quota or credit)
+ */
+export const useConsumePdfDownload = <TError = ErrorType<LimitReachedError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consumePdfDownload>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof consumePdfDownload>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getConsumePdfDownloadMutationOptions(options));
     }
 

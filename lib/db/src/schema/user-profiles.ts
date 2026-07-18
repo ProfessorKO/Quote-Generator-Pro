@@ -1,4 +1,10 @@
-import { pgTable, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  boolean,
+  timestamp,
+  integer,
+} from "drizzle-orm/pg-core";
 
 // One row per registered account, synced from Clerk (the auth provider owns
 // identity; this table mirrors it so admin views can join users to their
@@ -20,6 +26,10 @@ export const userProfilesTable = pgTable("user_profiles", {
   // Stripe (mirrored into the stripe.* schema by stripe-replit-sync).
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // Pay-as-you-go credit balance. 1 credit = 1 action (new quote, voice
+  // edit, email, or PDF download). Credits never expire and are consumed
+  // before free-tier limits are applied.
+  credits: integer("credits").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

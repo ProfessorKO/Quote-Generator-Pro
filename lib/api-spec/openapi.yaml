@@ -15,6 +15,8 @@ tags:
     description: Natural language parsing
   - name: openai
     description: OpenAI AI chat, image, and audio operations
+  - name: billing
+    description: Subscription, credits and usage limits
 paths:
   /healthz:
     get:
@@ -551,8 +553,234 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpenaiImageOutput"
 
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [billing]
+      summary: Get the current user's plan, credits, usage and catalog
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+
+  /billing/checkout:
+    post:
+      operationId: createBillingCheckout
+      tags: [billing]
+      summary: Start a Stripe Checkout session (Pro subscription or credit pack)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingCheckoutInput"
+      responses:
+        "200":
+          description: Checkout session URL, or resumed subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingCheckoutResult"
+
+  /billing/confirm:
+    post:
+      operationId: confirmBillingCheckout
+      tags: [billing]
+      summary: Confirm a completed Checkout session (idempotent fulfillment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingConfirmInput"
+      responses:
+        "200":
+          description: Fulfillment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingConfirmResult"
+
+  /billing/cancel:
+    post:
+      operationId: cancelBillingSubscription
+      tags: [billing]
+      summary: Cancel the Pro subscription at the end of the billing period
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingCancelInput"
+      responses:
+        "200":
+          description: Cancellation scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: string
+                  currentPeriodEnd:
+                    type: [string, "null"]
+
+  /usage/pdf-download:
+    post:
+      operationId: consumePdfDownload
+      tags: [billing]
+      summary: Authorize and record one PDF download (consumes quota or credit)
+      responses:
+        "200":
+          description: Download allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [allowed, source]
+                properties:
+                  allowed:
+                    type: boolean
+                  source:
+                    type: string
+                    enum: [pro, credit, free]
+                  creditsRemaining:
+                    type: integer
+        "402":
+          description: Free tier limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitReachedError"
+
 components:
   schemas:
+    UsageSnapshot:
+      type: object
+      required: [newQuotes, voiceEdits, emailsSent, pdfDownloads]
+      properties:
+        newQuotes:
+          type: integer
+        voiceEdits:
+          type: integer
+        emailsSent:
+          type: integer
+        pdfDownloads:
+          type: integer
+
+    FreeLimits:
+      type: object
+      required: [templates, newQuotes, voiceEdits, emailsSent, pdfDownloads]
+      properties:
+        templates:
+          type: integer
+        newQuotes:
+          type: integer
+        voiceEdits:
+          type: integer
+        emailsSent:
+          type: integer
+        pdfDownloads:
+          type: integer
+
+    CreditPack:
+      type: object
+      required: [credits, priceId, unitAmount, currency]
+      properties:
+        credits:
+          type: integer
+        priceId:
+          type: string
+        unitAmount:
+          type: integer
+          description: Price in cents (AUD)
+        currency:
+          type: string
+
+    BillingStatus:
+      type: object
+      required:
+        [plan, cancelAtPeriodEnd, credits, usage, limits, templatesCount, creditPacks]
+      properties:
+        plan:
+          type: string
+          enum: [pro, free]
+        cancelAtPeriodEnd:
+          type: boolean
+        currentPeriodEnd:
+          type: [string, "null"]
+        credits:
+          type: integer
+        usage:
+          $ref: "#/components/schemas/UsageSnapshot"
+        limits:
+          $ref: "#/components/schemas/FreeLimits"
+        templatesCount:
+          type: integer
+        creditPacks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditPack"
+
+    BillingCheckoutInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [subscription, credits]
+        credits:
+          type: integer
+          description: Pack size (10, 20, 50 or 100) when type is credits
+
+    BillingCheckoutResult:
+      type: object
+      properties:
+        url:
+          type: [string, "null"]
+        resumed:
+          type: boolean
+
+    BillingConfirmInput:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+
+    BillingCancelInput:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    BillingConfirmResult:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: string
+          enum: [subscription_active, credits_added]
+        creditsAdded:
+          type: integer
+        credits:
+          type: integer
+
+    LimitReachedError:
+      type: object
+      required: [error, code, action]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [LIMIT_REACHED]
+        action:
+          type: string
     HealthStatus:
       type: object
       properties:

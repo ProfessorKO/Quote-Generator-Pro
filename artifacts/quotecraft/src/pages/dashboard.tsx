@@ -20,7 +20,10 @@ import {
   Save as SaveIcon,
   ChevronRight,
   X,
+  Crown,
+  Coins,
 } from "lucide-react";
+import { useBilling } from "@/lib/billing";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -187,6 +190,7 @@ export default function Dashboard() {
   });
   const { data: templates, isLoading: templatesLoading } = useListTemplates();
   const deleteTemplate = useDeleteTemplate();
+  const { data: billing } = useBilling();
 
   const [quoteFilters, setQuoteFilters] = useState<Filters>(EMPTY_FILTERS);
   const [emailFilters, setEmailFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -235,6 +239,25 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold tracking-tight mt-0.5">
               {profile?.businessName || "Your business"}
             </h2>
+            {billing && (
+              <button
+                onClick={() => setLocation("/settings")}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/10 px-2.5 py-1 text-xs font-medium text-primary-foreground/90"
+              >
+                {billing.plan === "pro" ? (
+                  <>
+                    <Crown className="w-3.5 h-3.5" />
+                    Pro — unlimited
+                  </>
+                ) : (
+                  <>
+                    <Coins className="w-3.5 h-3.5" />
+                    {billing.credits} credit{billing.credits === 1 ? "" : "s"} ·
+                    Free plan
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
 

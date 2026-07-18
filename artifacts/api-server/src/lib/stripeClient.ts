@@ -39,7 +39,16 @@ async function getStripeCredentials(): Promise<{
     );
   }
 
-  const data = await resp.json();
+  const data = (await resp.json()) as {
+    items?: Array<{
+      connector_name?: string;
+      settings?: {
+        secret_key?: string;
+        secret?: string;
+        webhook_secret?: string;
+      };
+    }>;
+  };
   const stripeItem = (data.items ?? []).find(
     (item: { connector_name?: string }) => item.connector_name === "stripe",
   );

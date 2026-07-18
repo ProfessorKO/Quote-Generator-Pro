@@ -1,13 +1,36 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { ApplyVoiceCommandBody, ApplyVoiceCommandResponse } from "@workspace/api-zod";
+import { requireAuth, type AuthedRequest } from "../lib/auth";
+import {
+  getBillingStatus,
+  consumeAction,
+  LimitReachedError,
+  limitReachedResponse,
+} from "../lib/billing";
+import { upsertCurrentUser } from "../lib/user-sync";
 
 const router: IRouter = Router();
 
-router.post("/apply-voice-command", async (req, res): Promise<void> => {
+router.post("/apply-voice-command", requireAuth, async (req, res): Promise<void> => {
   const parsed = ApplyVoiceCommandBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  // Voice edits are metered, but per spec only SUCCESSFUL applications count.
+  // Cheap pre-check here rejects users already at their limit before we spend
+  // an AI call; the actual consumption happens after a successful apply.
+  const userId = (req as AuthedRequest).userId;
+  await upsertCurrentUser(userId);
+  const billing = await getBillingStatus(userId);
+  if (
+    billing.plan === "free" &&
+    billing.credits === 0 &&
+    billing.usage.voiceEdits >= billing.limits.voiceEdits
+  ) {
+    res.status(402).json(limitReachedResponse("voiceEdits"));
     return;
   }
 
@@ -155,6 +178,21 @@ Output this exact JSON structure:
       understood: false,
     });
     return;
+  }
+
+  // Consume the voice-edit quota ONLY when the command was actually
+  // understood and applied — schema-valid "understood: false" responses and
+  // the fallback above are free retries for the user.
+  if (validated.data.understood) {
+    try {
+      await consumeAction(userId, "voiceEdits");
+    } catch (err) {
+      if (err instanceof LimitReachedError) {
+        res.status(402).json(limitReachedResponse("voiceEdits"));
+        return;
+      }
+      throw err;
+    }
   }
 
   res.json(validated.data);

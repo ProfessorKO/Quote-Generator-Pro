@@ -15,7 +15,7 @@ async function initStripe(): Promise<void> {
   }
 
   logger.info("Initializing Stripe schema...");
-  await runMigrations({ databaseUrl, schema: "stripe" });
+  await runMigrations({ databaseUrl });
   logger.info("Stripe schema ready");
 
   const stripeSync = await getStripeSync();
@@ -26,7 +26,7 @@ async function initStripe(): Promise<void> {
     `${webhookBaseUrl}/api/stripe/webhook`,
   );
   logger.info(
-    { url: webhookResult?.webhook?.url ?? "setup complete" },
+    { url: (webhookResult as { url?: string } | undefined)?.url ?? "setup complete" },
     "Stripe webhook configured",
   );
 

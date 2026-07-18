@@ -3,7 +3,8 @@ import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useListTemplates, useDeleteTemplate, getListTemplatesQueryKey, QuoteTemplate } from "@workspace/api-client-react";
-import { Loader2, FileText, Trash2, ChevronRight, PlusCircle } from "lucide-react";
+import { Loader2, FileText, Trash2, ChevronRight, PlusCircle, Crown } from "lucide-react";
+import { useBilling } from "@/lib/billing";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ export default function Templates() {
     },
   });
   const deleteTemplate = useDeleteTemplate();
+  const { data: billing } = useBilling();
 
   useEffect(() => {
     if (templates) {
@@ -62,7 +64,30 @@ export default function Templates() {
   return (
     <Layout title="Saved Templates">
       <div className="p-4 flex flex-col gap-4 pb-24">
-        
+
+        {/* CP6 — free-tier template slot usage banner */}
+        {billing && billing.plan === "free" && (
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {Math.min(billing.templatesCount, billing.limits.templates)} of{" "}
+                {billing.limits.templates}
+              </span>{" "}
+              free template slots used
+              {billing.credits > 0
+                ? ` · ${billing.credits} credit${billing.credits === 1 ? "" : "s"} available`
+                : ""}
+            </p>
+            <button
+              onClick={() => setLocation("/settings")}
+              className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0"
+            >
+              <Crown className="w-3.5 h-3.5" />
+              Go Pro
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
             <Loader2 className="w-8 h-8 animate-spin text-primary/50" />

@@ -20,6 +20,7 @@ import {
   useUpsertBusinessProfile,
   useCreateQuote,
   useGetNextQuoteSequence,
+  useConsumePdfDownload,
   getListQuotesQueryKey,
   getGetBusinessProfileQueryKey,
   getGetNextQuoteSequenceQueryKey,
@@ -28,6 +29,12 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { buildPdf, downloadPdf, type PdfHeader } from "@/lib/pdf";
+import { LimitDialog } from "@/components/billing/limit-dialog";
+import {
+  limitReachedAction,
+  useInvalidateBilling,
+  type LimitAction,
+} from "@/lib/billing";
 import { buildQuoteRecord, computeTotals } from "@/lib/quote-record";
 import {
   sanitizePdfFilename,
@@ -73,6 +80,8 @@ export function ExportPdfDialog({
   });
   const createQuote = useCreateQuote();
   const upsertProfile = useUpsertBusinessProfile();
+  const consumePdf = useConsumePdfDownload();
+  const invalidateBilling = useInvalidateBilling();
 
   const [contactName, setContactName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -84,6 +93,8 @@ export function ExportPdfDialog({
   const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
+  // CP4 — free-tier PDF download limit reached (402 from the usage check).
+  const [limitAction, setLimitAction] = useState<LimitAction | null>(null);
   // Once the user edits the filename, stop auto-regenerating it (#28).
   const filenameDirtyRef = useRef(false);
 
@@ -229,6 +240,21 @@ export function ExportPdfDialog({
 
     setGenerating(true);
     try {
+      // CP4 — PDF downloads are a metered action (§ monetization). Consume a
+      // credit / free-tier slot BEFORE generating; a 402 means the limit was
+      // reached and we show the upgrade dialog instead.
+      try {
+        await consumePdf.mutateAsync();
+        invalidateBilling();
+      } catch (err) {
+        if (limitReachedAction(err)) {
+          setLimitAction("pdfDownloads");
+          return;
+        }
+        toast.error("Couldn't verify your plan. Check your connection and try again.");
+        return;
+      }
+
       // Build the PDF locally — this works even fully offline.
       const doc = buildPdf({
         header,
@@ -540,6 +566,10 @@ export function ExportPdfDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <LimitDialog
+        action={limitAction}
+        onOpenChange={(o) => !o && setLimitAction(null)}
+      />
     </Dialog>
   );
 }

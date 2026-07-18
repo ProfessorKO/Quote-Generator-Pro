@@ -37,6 +37,12 @@ import { MicPermissionDialog } from "@/components/mic-permission-dialog";
 import { checkMicPermission } from "@/lib/mic-permission";
 import { NumericInput } from "@/components/numeric-input";
 import { VoiceOverlay } from "@/components/voice-overlay";
+import { LimitDialog } from "@/components/billing/limit-dialog";
+import {
+  limitReachedAction,
+  useInvalidateBilling,
+  type LimitAction,
+} from "@/lib/billing";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
@@ -96,6 +102,9 @@ export default function Home() {
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [retryingPermission, setRetryingPermission] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  // CP1/CP2/CP5 — which free-tier limit dialog to show (402 responses).
+  const [limitAction, setLimitAction] = useState<LimitAction | null>(null);
+  const invalidateBilling = useInvalidateBilling();
 
   const LISTEN_WINDOW_SECONDS = 30;
 
@@ -373,6 +382,7 @@ export default function Home() {
         onSuccess: (data) => {
           toast.dismiss(loadingToast);
           stopProcessing();
+          invalidateBilling();
           if (data.understood) {
             // Bug #12 — detect a rename deterministically by diffing labels BY ID
             // (the item name shown to the user) so we confirm "Item renamed to X".
@@ -396,9 +406,14 @@ export default function Home() {
             toast.error(data.message || "Couldn't understand that command");
           }
         },
-        onError: () => {
+        onError: (err) => {
           toast.dismiss(loadingToast);
           stopProcessing();
+          // CP2 — free voice-edit limit reached.
+          if (limitReachedAction(err)) {
+            setLimitAction("voiceEdits");
+            return;
+          }
           toast.error("Failed to apply command. Please try again.");
         },
       }
@@ -548,6 +563,7 @@ export default function Home() {
     parseQuote.mutate({ data: { description } }, {
       onSuccess: (data) => {
         stopProcessing();
+        invalidateBilling();
         setLineItems(data.lineItems);
         setSettings(data.settings);
         if (data.businessName) {
@@ -557,6 +573,11 @@ export default function Home() {
       },
       onError: (err) => {
         stopProcessing();
+        // CP1 — free new-quote limit reached.
+        if (limitReachedAction(err)) {
+          setLimitAction("newQuotes");
+          return;
+        }
         toast.error("Failed to generate quote. Please try again.");
       }
     });
@@ -634,6 +655,12 @@ export default function Home() {
         );
       },
       onError: (err) => {
+        // CP5 — free template-slot limit reached.
+        if (limitReachedAction(err)) {
+          setSaveDialogOpen(false);
+          setLimitAction("templates");
+          return;
+        }
         if ((err as { status?: number })?.status === 409) {
           toast.error("That template name is already taken. Please choose a different name.");
         } else {
@@ -1046,6 +1073,12 @@ export default function Home() {
         label={businessName || "Quote"}
         lineItems={lineItems}
         settings={settings}
+      />
+
+      {/* CP1/CP2/CP5 — free-tier limit reached */}
+      <LimitDialog
+        action={limitAction}
+        onOpenChange={(o) => !o && setLimitAction(null)}
       />
 
     </Layout>

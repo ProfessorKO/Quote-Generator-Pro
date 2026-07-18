@@ -1,14 +1,35 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { ParseQuoteDescriptionBody, ParseQuoteDescriptionResponse } from "@workspace/api-zod";
+import { requireAuth, type AuthedRequest } from "../lib/auth";
+import {
+  consumeAction,
+  LimitReachedError,
+  limitReachedResponse,
+} from "../lib/billing";
+import { upsertCurrentUser } from "../lib/user-sync";
 
 const router: IRouter = Router();
 
-router.post("/parse-quote", async (req, res): Promise<void> => {
+router.post("/parse-quote", requireAuth, async (req, res): Promise<void> => {
   const parsed = ParseQuoteDescriptionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+
+  // Generating a quote from scratch is a metered "new quote" action:
+  // Pro = unlimited, otherwise 1 credit, otherwise free-tier allowance.
+  const userId = (req as AuthedRequest).userId;
+  await upsertCurrentUser(userId);
+  try {
+    await consumeAction(userId, "newQuotes");
+  } catch (err) {
+    if (err instanceof LimitReachedError) {
+      res.status(402).json(limitReachedResponse("newQuotes"));
+      return;
+    }
+    throw err;
   }
 
   const { description } = parsed.data;

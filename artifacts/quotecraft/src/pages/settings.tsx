@@ -3,6 +3,7 @@ import { useUser, useClerk } from "@clerk/react";
 import { Loader2, UserCog } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { BusinessProfileForm } from "@/components/business-profile-form";
+import { SubscriptionSection } from "@/components/billing/subscription-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,6 +130,16 @@ export default function Settings() {
               <UserCog className="w-4 h-4" />
               Manage name, email & password
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* CP7/CP8/CP9 — subscription & credits */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Subscription & credits</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SubscriptionSection />
           </CardContent>
         </Card>
 

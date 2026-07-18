@@ -6,3 +6,4 @@ export * from "./user-profiles";
 export * from "./quotes";
 export * from "./email-records";
 export * from "./email-templates";
+export * from "./billing";

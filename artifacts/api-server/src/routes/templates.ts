@@ -11,19 +11,32 @@ import {
   DeleteTemplateParams,
   ListTemplatesResponse,
 } from "@workspace/api-zod";
-import { logger } from "../lib/logger";
+import { requireAuth, type AuthedRequest } from "../lib/auth";
+import {
+  authorizeTemplateSave,
+  LimitReachedError,
+  limitReachedResponse,
+} from "../lib/billing";
+import { upsertCurrentUser } from "../lib/user-sync";
 
 const router: IRouter = Router();
 
-router.get("/templates", async (req, res): Promise<void> => {
+// All template routes are per-user: every query is scoped to the
+// authenticated user so one account can never see or touch another's
+// templates.
+
+router.get("/templates", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId;
   const templates = await db
     .select()
     .from(templatesTable)
+    .where(eq(templatesTable.userId, userId))
     .orderBy(templatesTable.updatedAt);
   res.json(ListTemplatesResponse.parse(templates));
 });
 
-router.post("/templates", async (req, res): Promise<void> => {
+router.post("/templates", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId;
   const parsed = CreateTemplateBody.safeParse(req.body);
   if (!parsed.success) {
     req.log.warn({ errors: parsed.error.message }, "Invalid template body");
@@ -36,24 +49,45 @@ router.post("/templates", async (req, res): Promise<void> => {
   const duplicate = await db
     .select({ id: templatesTable.id })
     .from(templatesTable)
-    .where(sql`lower(${templatesTable.name}) = lower(${name})`);
+    .where(
+      and(
+        eq(templatesTable.userId, userId),
+        sql`lower(${templatesTable.name}) = lower(${name})`,
+      ),
+    );
   if (duplicate.length > 0) {
     res.status(409).json({ error: "A template with this name already exists" });
     return;
   }
 
+  // Free tier: 5 template slots; beyond that a credit is consumed if
+  // available, otherwise the save is blocked. Pro is unlimited. The insert
+  // runs inside the authorization transaction so the slot check and the
+  // insert are atomic (no concurrent free-slot bypass).
+  await upsertCurrentUser(userId);
   try {
-    const [template] = await db
-      .insert(templatesTable)
-      .values({
-        name,
-        businessDescription: parsed.data.businessDescription,
-        lineItems: parsed.data.lineItems as any,
-        settings: parsed.data.settings as any,
-      })
-      .returning();
+    const { result: template } = await authorizeTemplateSave(
+      userId,
+      async (tx) => {
+        const [row] = await tx
+          .insert(templatesTable)
+          .values({
+            userId,
+            name,
+            businessDescription: parsed.data.businessDescription,
+            lineItems: parsed.data.lineItems as any,
+            settings: parsed.data.settings as any,
+          })
+          .returning();
+        return row;
+      },
+    );
     res.status(201).json(GetTemplateResponse.parse(template));
   } catch (err) {
+    if (err instanceof LimitReachedError) {
+      res.status(402).json(limitReachedResponse("templates"));
+      return;
+    }
     if ((err as { code?: string })?.code === "23505") {
       res.status(409).json({ error: "A template with this name already exists" });
       return;
@@ -62,7 +96,8 @@ router.post("/templates", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/templates/:id", async (req, res): Promise<void> => {
+router.get("/templates/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId;
   const params = GetTemplateParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -72,7 +107,12 @@ router.get("/templates/:id", async (req, res): Promise<void> => {
   const [template] = await db
     .select()
     .from(templatesTable)
-    .where(eq(templatesTable.id, params.data.id));
+    .where(
+      and(
+        eq(templatesTable.id, params.data.id),
+        eq(templatesTable.userId, userId),
+      ),
+    );
 
   if (!template) {
     res.status(404).json({ error: "Template not found" });
@@ -82,7 +122,10 @@ router.get("/templates/:id", async (req, res): Promise<void> => {
   res.json(GetTemplateResponse.parse(template));
 });
 
-router.put("/templates/:id", async (req, res): Promise<void> => {
+// Editing an existing template is never metered — manual edits are free on
+// every plan, and templates remain editable after a downgrade.
+router.put("/templates/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId;
   const params = UpdateTemplateParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -103,6 +146,7 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
     .from(templatesTable)
     .where(
       and(
+        eq(templatesTable.userId, userId),
         sql`lower(${templatesTable.name}) = lower(${name})`,
         ne(templatesTable.id, params.data.id),
       ),
@@ -122,7 +166,12 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
         settings: parsed.data.settings as any,
         updatedAt: new Date(),
       })
-      .where(eq(templatesTable.id, params.data.id))
+      .where(
+        and(
+          eq(templatesTable.id, params.data.id),
+          eq(templatesTable.userId, userId),
+        ),
+      )
       .returning();
 
     if (!template) {
@@ -140,7 +189,8 @@ router.put("/templates/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/templates/:id", async (req, res): Promise<void> => {
+router.delete("/templates/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthedRequest).userId;
   const params = DeleteTemplateParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -149,7 +199,12 @@ router.delete("/templates/:id", async (req, res): Promise<void> => {
 
   const [deleted] = await db
     .delete(templatesTable)
-    .where(eq(templatesTable.id, params.data.id))
+    .where(
+      and(
+        eq(templatesTable.id, params.data.id),
+        eq(templatesTable.userId, userId),
+      ),
+    )
     .returning();
 
   if (!deleted) {

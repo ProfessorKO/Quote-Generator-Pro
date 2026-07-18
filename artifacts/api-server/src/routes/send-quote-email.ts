@@ -8,6 +8,13 @@ import {
   SendQuoteEmailError,
   type SendFailureReason,
 } from "../lib/resend";
+import {
+  consumeAction,
+  refundAction,
+  LimitReachedError,
+  limitReachedResponse,
+} from "../lib/billing";
+import { upsertCurrentUser } from "../lib/user-sync";
 
 const router: IRouter = Router();
 
@@ -45,6 +52,21 @@ router.post("/send-quote-email", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
+  // Sending an email is a metered action. Consume BEFORE sending so two
+  // concurrent requests can't both slip past the limit; if the send itself
+  // fails we refund below.
+  await upsertCurrentUser(userId);
+  let consumed;
+  try {
+    consumed = await consumeAction(userId, "emailsSent");
+  } catch (err) {
+    if (err instanceof LimitReachedError) {
+      res.status(402).json(limitReachedResponse("emailsSent"));
+      return;
+    }
+    throw err;
+  }
+
   const data = parsed.data;
   const html = data.body
     .split("\n")
@@ -69,6 +91,11 @@ router.post("/send-quote-email", requireAuth, async (req, res): Promise<void> =>
     });
   } catch (err) {
     req.log.error({ err }, "Failed to send quote email");
+    // The email never went out, so give back whatever was consumed above.
+    await refundAction(userId, "emailsSent", consumed.source).catch(
+      (refundErr) =>
+        req.log.error({ err: refundErr }, "Failed to refund email quota"),
+    );
     const reason: SendFailureReason =
       err instanceof SendQuoteEmailError ? err.reason : "unknown";
     const mapped = FAILURE_RESPONSE[reason];

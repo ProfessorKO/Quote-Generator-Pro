@@ -1,1 +1,2 @@
 - [Clerk testing & API quirks](clerk-testing-and-api.md) — testClerkAuth retry flakiness, %2B-encode order_by in raw Clerk REST calls, consent is per-user by design.
+- [QuoteCraft billing conventions](quotecraft-billing.md) — 402 LIMIT_REACHED contract, metering rules (voice/email/PDF/templates), atomic template-slot insert, checkout-confirm retry rule.
