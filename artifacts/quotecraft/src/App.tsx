@@ -5,6 +5,7 @@ import {
   SignUp,
   Show,
   useClerk,
+  useUser,
 } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -145,13 +146,21 @@ function SignUpPage() {
 // After sign-in/sign-up: send new users to complete their business profile,
 // otherwise resume a pending gated action (→ /quote) or land on the dashboard.
 function PostAuthGate() {
-  const { data, isLoading, isError, isSuccess, error } = useGetBusinessProfile({
-    query: { retry: false, queryKey: getGetBusinessProfileQueryKey() },
+  const { isLoaded, isSignedIn } = useUser();
+  const { data, isError, isSuccess, error } = useGetBusinessProfile({
+    query: {
+      retry: false,
+      queryKey: getGetBusinessProfileQueryKey(),
+      // Don't fire until Clerk has an active session — an early request
+      // would 401 and mis-route the user.
+      enabled: isLoaded && !!isSignedIn,
+    },
   });
 
   const resumePath = peekPendingAction() ? "/quote" : "/dashboard";
 
-  if (isLoading) return <PageFallback />;
+  if (!isLoaded) return <PageFallback />;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
   if (isError) {
     // Only a genuine "profile not found" (404) means the user must onboard.
     // Transient/auth/server errors must NOT force onboarding — fall back to the
@@ -159,8 +168,8 @@ function PostAuthGate() {
     const status = (error as { status?: number } | null)?.status;
     return <Redirect to={status === 404 ? "/complete-profile" : resumePath} />;
   }
-  if (isSuccess && data) {
-    return <Redirect to={resumePath} />;
+  if (isSuccess) {
+    return <Redirect to={data ? resumePath : "/complete-profile"} />;
   }
   return <PageFallback />;
 }
@@ -190,7 +199,13 @@ function ClerkQueryClientCacheInvalidator() {
         prevUserIdRef.current !== undefined &&
         prevUserIdRef.current !== userId
       ) {
-        qc.clear();
+        // Reset (not clear) so components with in-flight queries — e.g.
+        // PostAuthGate right after sign-in — are refetched instead of being
+        // left stuck in a permanent loading state. `clear()` removes active
+        // queries without notifying observers, which caused an infinite
+        // spinner after sign-in until a manual refresh.
+        void qc.cancelQueries();
+        void qc.resetQueries();
       }
       prevUserIdRef.current = userId;
     });
