@@ -573,12 +573,24 @@ export default function Home() {
       },
       onError: (err) => {
         stopProcessing();
-        // CP1 — free new-quote limit reached.
+        // CP1 — free new-quote limit reached (logged-in users only).
         if (limitReachedAction(err)) {
           setLimitAction("newQuotes");
           return;
         }
-        toast.error("Failed to generate quote. Please try again.");
+        // Log the full error so failures are diagnosable in the console.
+        const e = err as { status?: number; data?: { error?: string }; message?: string };
+        console.error("Quote generation failed:", {
+          status: e?.status,
+          data: e?.data,
+          message: e?.message,
+          error: err,
+        });
+        const serverMessage =
+          typeof e?.data?.error === "string" && e.data.error.length < 200
+            ? ` (${e.data.error})`
+            : "";
+        toast.error(`Failed to generate quote. Please try again.${serverMessage}`);
       }
     });
   };

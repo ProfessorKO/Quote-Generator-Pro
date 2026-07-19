@@ -116,6 +116,13 @@ export async function consumeAction(
   userId: string,
   action: MeteredAction,
 ): Promise<ConsumeResult> {
+  // Defensive guard: metering only applies to logged-in users. Visitors are
+  // never metered — routes that allow anonymous access must skip this call,
+  // but if one slips through, treat it as a free (unmetered) action rather
+  // than corrupting counters with an empty user id.
+  if (!userId) {
+    return { source: "free", creditsRemaining: 0 };
+  }
   const sub = await getSubscriptionInfo(userId);
 
   return await db.transaction(async (tx) => {
