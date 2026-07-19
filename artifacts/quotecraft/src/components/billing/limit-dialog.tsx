@@ -93,7 +93,7 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
         onOpenChange(o);
       }}
     >
-      <DialogContent className="sm:max-w-md w-[92vw] rounded-xl">
+      <DialogContent className="sm:max-w-md w-[92vw] max-w-[92vw] overflow-hidden rounded-xl">
         <DialogHeader>
           <DialogTitle className="break-words pr-6">{copy?.title}</DialogTitle>
           <DialogDescription className="break-words">
@@ -106,7 +106,7 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
         ) : (
           <div className="space-y-2 py-1">
             <Button
-              className="w-full h-11 font-semibold"
+              className="w-full h-auto min-h-11 whitespace-normal text-center font-semibold"
               onClick={subscribe}
               disabled={checkout.isPending}
             >
@@ -115,15 +115,15 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
               ) : (
                 <Crown className="w-4 h-4" />
               )}
-              Go Pro — $4.99/month, unlimited everything
+              <span className="min-w-0">Go Pro — $4.99/month, unlimited everything</span>
             </Button>
             <Button
               variant="outline"
-              className="w-full h-11"
+              className="w-full h-auto min-h-11 whitespace-normal text-center"
               onClick={() => setShowPacks(true)}
             >
               <Coins className="w-4 h-4" />
-              Buy credits from $2
+              <span className="min-w-0">Buy credits from $2</span>
             </Button>
             {typeof billing?.credits === "number" && billing.credits > 0 && (
               <p className="text-xs text-center text-muted-foreground">
