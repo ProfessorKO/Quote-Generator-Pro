@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, Crown, Coins } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Crown, Coins, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -64,6 +64,13 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
   const { data: billing } = useBilling();
   const [showPacks, setShowPacks] = useState(false);
 
+  // Every (re)open must start on the initial view (Go Pro + Buy credits),
+  // regardless of how the dialog was last dismissed — closing via the
+  // "Maybe later" button bypasses the Dialog onOpenChange reset below.
+  useEffect(() => {
+    if (action !== null) setShowPacks(false);
+  }, [action]);
+
   const copy = action ? COPY[action] : null;
 
   const subscribe = () => {
@@ -102,7 +109,16 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
         </DialogHeader>
 
         {showPacks ? (
-          <CreditPacks />
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowPacks(false)}
+              className="flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </button>
+            <CreditPacks />
+          </div>
         ) : (
           <div className="space-y-2 py-1">
             <Button
@@ -138,7 +154,10 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
           <Button
             variant="ghost"
             className="w-full sm:w-auto"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setShowPacks(false);
+              onOpenChange(false);
+            }}
           >
             Maybe later
           </Button>
