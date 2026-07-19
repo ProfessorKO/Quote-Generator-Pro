@@ -1,0 +1,30 @@
+modules = ["nodejs-24", "postgresql-16", "python-3.11"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+integrations = ["resend:1.0.0", "stripe:1.0.0", "github:1.0.0"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+packages = ["gut", "zip"]
+
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAILS = "cljay_0508@hotmail.com"

@@ -1,0 +1,1333 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: QuoteCraft API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: templates
+    description: Quote template management
+  - name: parse
+    description: Natural language parsing
+  - name: openai
+    description: OpenAI AI chat, image, and audio operations
+  - name: billing
+    description: Subscription, credits and usage limits
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List all saved quote templates
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuoteTemplate"
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Save a new quote template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteTemplateInput"
+      responses:
+        "201":
+          description: Created template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteTemplate"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      summary: Get a single quote template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quote template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteTemplate"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: updateTemplate
+      tags: [templates]
+      summary: Update a quote template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteTemplateInput"
+      responses:
+        "200":
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteTemplate"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Delete a quote template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /parse-quote:
+    post:
+      operationId: parseQuoteDescription
+      tags: [parse]
+      summary: Parse a natural language business description into quote fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseQuoteInput"
+      responses:
+        "200":
+          description: Parsed quote form structure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedQuote"
+
+  /apply-voice-command:
+    post:
+      operationId: applyVoiceCommand
+      tags: [parse]
+      summary: Apply a spoken command to an existing quote structure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoiceCommandInput"
+      responses:
+        "200":
+          description: Updated quote structure with a summary of the change
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceCommandResult"
+
+  /profile:
+    get:
+      operationId: getBusinessProfile
+      tags: [profile]
+      summary: Get the current user's business profile
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+        "404":
+          description: No profile yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: upsertBusinessProfile
+      tags: [profile]
+      summary: Create or update the current user's business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessProfileInput"
+      responses:
+        "200":
+          description: Saved business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessProfile"
+
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: Owner-only combined view of all registered users
+      description: >
+        Syncs the local user_profiles table from Clerk, then returns every
+        registered user with email, sign-up method, registration/closure
+        times, marketing consent, and their business names. Requires the
+        signed-in user's email to be listed in the ADMIN_EMAILS environment
+        variable.
+      responses:
+        "200":
+          description: All registered users with consent and businesses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /quotes:
+    get:
+      operationId: listQuotes
+      tags: [quotes]
+      summary: List the current user's quote history with optional filters
+      parameters:
+        - name: clientName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientEmail
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientSuburb
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sentMonth
+          in: query
+          required: false
+          description: Filter by quote-sent month in YYYY-MM format
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuoteRecord"
+    post:
+      operationId: createQuote
+      tags: [quotes]
+      summary: Record a quote to history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteRecordInput"
+      responses:
+        "201":
+          description: Created quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+
+  /quotes/next-sequence:
+    get:
+      operationId: getNextQuoteSequence
+      tags: [quotes]
+      summary: Next per-user quote sequence number for the current year (resets yearly)
+      responses:
+        "200":
+          description: Next sequence number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextQuoteSequence"
+
+  /quotes/{id}:
+    get:
+      operationId: getQuote
+      tags: [quotes]
+      summary: Get a single quote from history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /email-template:
+    get:
+      operationId: getEmailTemplate
+      tags: [email]
+      summary: Get the current user's default client-email template
+      responses:
+        "200":
+          description: Email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+    put:
+      operationId: upsertEmailTemplate
+      tags: [email]
+      summary: Create or update the default client-email template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailTemplateInput"
+      responses:
+        "200":
+          description: Saved email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailTemplate"
+
+  /email-records:
+    get:
+      operationId: listEmailRecords
+      tags: [email]
+      summary: List the current user's sent client emails with optional filters
+      parameters:
+        - name: clientName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientEmail
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clientSuburb
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sentMonth
+          in: query
+          required: false
+          description: Filter by sent month in YYYY-MM format
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of email records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailRecord"
+
+  /send-quote-email:
+    post:
+      operationId: sendQuoteEmail
+      tags: [email]
+      summary: Email a quote to a client on the user's behalf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendQuoteEmailInput"
+      responses:
+        "200":
+          description: Email sent and recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailRecord"
+
+  /openai/conversations:
+    get:
+      operationId: listOpenaiConversations
+      tags: [openai]
+      summary: List all conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiConversation"
+    post:
+      operationId: createOpenaiConversation
+      tags: [openai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiConversationInput"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+
+  /openai/conversations/{id}:
+    get:
+      operationId: getOpenaiConversation
+      tags: [openai]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+    delete:
+      operationId: deleteOpenaiConversation
+      tags: [openai]
+      summary: Delete a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+
+  /openai/conversations/{id}/messages:
+    get:
+      operationId: listOpenaiMessages
+      tags: [openai]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiMessage"
+    post:
+      operationId: sendOpenaiMessage
+      tags: [openai]
+      summary: Send a text message and receive a streaming text response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiMessageInput"
+      responses:
+        "200":
+          description: SSE stream of assistant text chunks
+          content:
+            text/event-stream: {}
+
+  /openai/generate-image:
+    post:
+      operationId: generateOpenaiImage
+      tags: [openai]
+      summary: Generate an image from a text prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiImageInput"
+      responses:
+        "200":
+          description: Generated image data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiImageOutput"
+
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [billing]
+      summary: Get the current user's plan, credits, usage and catalog
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+
+  /billing/checkout:
+    post:
+      operationId: createBillingCheckout
+      tags: [billing]
+      summary: Start a Stripe Checkout session (Pro subscription or credit pack)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingCheckoutInput"
+      responses:
+        "200":
+          description: Checkout session URL, or resumed subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingCheckoutResult"
+
+  /billing/confirm:
+    post:
+      operationId: confirmBillingCheckout
+      tags: [billing]
+      summary: Confirm a completed Checkout session (idempotent fulfillment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingConfirmInput"
+      responses:
+        "200":
+          description: Fulfillment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingConfirmResult"
+
+  /billing/cancel:
+    post:
+      operationId: cancelBillingSubscription
+      tags: [billing]
+      summary: Cancel the Pro subscription at the end of the billing period
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingCancelInput"
+      responses:
+        "200":
+          description: Cancellation scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: string
+                  currentPeriodEnd:
+                    type: [string, "null"]
+
+  /usage/pdf-download:
+    post:
+      operationId: consumePdfDownload
+      tags: [billing]
+      summary: Authorize and record one PDF download (consumes quota or credit)
+      responses:
+        "200":
+          description: Download allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [allowed, source]
+                properties:
+                  allowed:
+                    type: boolean
+                  source:
+                    type: string
+                    enum: [pro, credit, free]
+                  creditsRemaining:
+                    type: integer
+        "402":
+          description: Free tier limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitReachedError"
+
+components:
+  schemas:
+    UsageSnapshot:
+      type: object
+      required: [newQuotes, voiceEdits, emailsSent, pdfDownloads]
+      properties:
+        newQuotes:
+          type: integer
+        voiceEdits:
+          type: integer
+        emailsSent:
+          type: integer
+        pdfDownloads:
+          type: integer
+
+    FreeLimits:
+      type: object
+      required: [templates, newQuotes, voiceEdits, emailsSent, pdfDownloads]
+      properties:
+        templates:
+          type: integer
+        newQuotes:
+          type: integer
+        voiceEdits:
+          type: integer
+        emailsSent:
+          type: integer
+        pdfDownloads:
+          type: integer
+
+    CreditPack:
+      type: object
+      required: [credits, priceId, unitAmount, currency]
+      properties:
+        credits:
+          type: integer
+        priceId:
+          type: string
+        unitAmount:
+          type: integer
+          description: Price in cents (AUD)
+        currency:
+          type: string
+
+    BillingStatus:
+      type: object
+      required:
+        [plan, cancelAtPeriodEnd, credits, usage, limits, templatesCount, creditPacks]
+      properties:
+        plan:
+          type: string
+          enum: [pro, free]
+        cancelAtPeriodEnd:
+          type: boolean
+        currentPeriodEnd:
+          type: [string, "null"]
+        credits:
+          type: integer
+        usage:
+          $ref: "#/components/schemas/UsageSnapshot"
+        limits:
+          $ref: "#/components/schemas/FreeLimits"
+        templatesCount:
+          type: integer
+        creditPacks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditPack"
+
+    BillingCheckoutInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [subscription, credits]
+        credits:
+          type: integer
+          description: Pack size (10, 20, 50 or 100) when type is credits
+
+    BillingCheckoutResult:
+      type: object
+      properties:
+        url:
+          type: [string, "null"]
+        resumed:
+          type: boolean
+
+    BillingConfirmInput:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+
+    BillingCancelInput:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    BillingConfirmResult:
+      type: object
+      required: [result]
+      properties:
+        result:
+          type: string
+          enum: [subscription_active, credits_added]
+        creditsAdded:
+          type: integer
+        credits:
+          type: integer
+
+    LimitReachedError:
+      type: object
+      required: [error, code, action]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum: [LIMIT_REACHED]
+        action:
+          type: string
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    QuoteLineItem:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        description:
+          type: ["string", "null"]
+        unit:
+          type: string
+        unitPrice:
+          type: number
+        quantity:
+          type: number
+        voiceKey:
+          type: string
+          description: Voice command keyword to set this field quantity
+        overtimePercent:
+          type: number
+          description: >-
+            Overtime markup percentage applied on top of the base unitPrice.
+            Effective rate = unitPrice + (unitPrice * overtimePercent / 100).
+            0 or absent means no overtime.
+      required:
+        - id
+        - label
+        - unit
+        - unitPrice
+        - quantity
+        - voiceKey
+
+    QuoteSettings:
+      type: object
+      properties:
+        includeGst:
+          type: boolean
+        gstRate:
+          type: number
+        callOutFee:
+          type: number
+        publicHolidaySurchargePercent:
+          type: number
+        isPublicHoliday:
+          type: boolean
+        hasCallOut:
+          type: boolean
+      required:
+        - includeGst
+        - gstRate
+        - callOutFee
+        - publicHolidaySurchargePercent
+        - isPublicHoliday
+        - hasCallOut
+
+    QuoteTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        businessDescription:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - businessDescription
+        - lineItems
+        - settings
+        - createdAt
+        - updatedAt
+
+    QuoteTemplateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        businessDescription:
+          type: string
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+      required:
+        - name
+        - businessDescription
+        - lineItems
+        - settings
+
+    ParseQuoteInput:
+      type: object
+      properties:
+        description:
+          type: string
+          description: Natural language description of the business and pricing
+      required:
+        - description
+
+    ParsedQuote:
+      type: object
+      properties:
+        businessName:
+          type: ["string", "null"]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+      required:
+        - lineItems
+        - settings
+
+    VoiceCommandInput:
+      type: object
+      properties:
+        command:
+          type: string
+          description: The spoken command transcript to apply to the quote
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+      required:
+        - command
+        - lineItems
+        - settings
+
+    VoiceCommandResult:
+      type: object
+      properties:
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        message:
+          type: string
+          description: Short human-readable summary of what changed
+        understood:
+          type: boolean
+          description: Whether the command was understood and applied
+      required:
+        - lineItems
+        - settings
+        - message
+        - understood
+
+    BusinessProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        mobile:
+          type: string
+        abn:
+          type: string
+        acn:
+          type: ["string", "null"]
+        address:
+          type: string
+        marketingConsent:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - businessName
+        - mobile
+        - abn
+        - address
+        - marketingConsent
+        - createdAt
+        - updatedAt
+
+    BusinessProfileInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+        mobile:
+          type: string
+        abn:
+          type: string
+        acn:
+          type: ["string", "null"]
+        address:
+          type: string
+        marketingConsent:
+          type: boolean
+      required:
+        - businessName
+        - mobile
+        - abn
+        - address
+        - marketingConsent
+
+    AdminUser:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+        signupMethod:
+          type: ["string", "null"]
+        registeredAt:
+          type: ["string", "null"]
+          format: date-time
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        marketingConsent:
+          type: boolean
+        businesses:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - email
+        - signupMethod
+        - registeredAt
+        - closedAt
+        - marketingConsent
+        - businesses
+
+    QuoteRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        clientName:
+          type: ["string", "null"]
+        clientEmail:
+          type: ["string", "null"]
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        total:
+          type: number
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - label
+        - lineItems
+        - settings
+        - total
+        - source
+        - createdAt
+
+    QuoteRecordInput:
+      type: object
+      properties:
+        label:
+          type: string
+        clientName:
+          type: ["string", "null"]
+        clientEmail:
+          type: ["string", "null"]
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuoteLineItem"
+        settings:
+          $ref: "#/components/schemas/QuoteSettings"
+        total:
+          type: number
+        source:
+          type: string
+          description: One of save, download, email
+      required:
+        - label
+        - lineItems
+        - settings
+        - total
+        - source
+
+    NextQuoteSequence:
+      type: object
+      properties:
+        year:
+          type: integer
+        sequence:
+          type: integer
+          description: Next sequence number for this user and year (1-based)
+        formatted:
+          type: string
+          description: Zero-padded 3-digit sequence, e.g. "001"
+      required:
+        - year
+        - sequence
+        - formatted
+
+    EmailTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - subject
+        - body
+        - createdAt
+        - updatedAt
+
+    EmailTemplateInput:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+        - subject
+        - body
+
+    EmailRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        quoteId:
+          type: ["integer", "null"]
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientSuburb:
+          type: ["string", "null"]
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clientName
+        - clientEmail
+        - subject
+        - body
+        - status
+        - sentAt
+
+    SendQuoteEmailInput:
+      type: object
+      properties:
+        quoteId:
+          type: ["integer", "null"]
+        quote:
+          description: >-
+            Quote to record only if the email is sent successfully. Provide this
+            (instead of quoteId) so the quote is never persisted for a failed
+            send.
+          $ref: "#/components/schemas/QuoteRecordInput"
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+        clientAddress:
+          type: ["string", "null"]
+        clientSuburb:
+          type: ["string", "null"]
+        subject:
+          type: string
+        body:
+          type: string
+        attachmentBase64:
+          type: ["string", "null"]
+          description: Base64-encoded PDF of the quote to attach
+        attachmentFilename:
+          type: ["string", "null"]
+      required:
+        - clientName
+        - clientEmail
+        - subject
+        - body
+
+    OpenaiConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+
+    OpenaiMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    OpenaiConversationInput:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    OpenaiMessageInput:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    OpenaiConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenaiMessage"
+      required:
+        - id
+        - title
+        - createdAt
+        - messages
+
+    OpenaiImageInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+        size:
+          type: string
+          enum: ["1024x1024", "512x512", "256x256"]
+      required:
+        - prompt
+
+    OpenaiImageOutput:
+      type: object
+      properties:
+        b64_json:
+          type: string
+      required:
+        - b64_json
+
+    OpenaiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

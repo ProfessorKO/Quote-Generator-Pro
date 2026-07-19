@@ -1,0 +1,41 @@
+Bug #29: Mobile prefix overflow – -04 squeezed to second line
+Description: In the mobile input field, the prefix +61-04 overflows – the -04 wraps to the second line, breaking the layout.
+Fix: Ensure the full prefix +61-04 fits on one line with the 8-digit input field. Add white-space: nowrap and min-width to the prefix container. Set the input field width to max-width: 160px with font-mono and tracking-[0.15em]. Apply to ALL mobile input fields across Registration, Download PDF, Profile Settings, and Email Quote.
+
+---
+
+Bug #30: PDF generated, but couldn't be saved to your history
+Description: When a user clicks 'Generate PDF', the PDF downloads successfully but the quote history entry fails to save. The "download" action does not create a history record.
+Fix (Hybrid Approach):
+
+1. Keep PDF generation in the frontend (fast, scalable, zero server load).
+2. Before generating the PDF, call POST /api/quotes to save the history record with source: "download".
+3. If the history save succeeds, proceed with client-side PDF generation.
+4. If the history save fails (network error), save the quote to a localStorage offline queue.
+5. Generate the PDF locally regardless (user experience first).
+6. When the user reconnects, sync the offline queue to the server.
+7. This ensures history is eventually consistent while keeping PDF generation fast and scalable.
+
+---
+
+Bug #31: Quote month filter input box overflow and asymmetric sizing
+Description: On the Dashboard, the quote month filter input box has overflow issues – its width and height are inconsistent with the other 3 filters, breaking the visual symmetry.
+Fix: Ensure all 4 filter input boxes have the same width and height. Add w-full min-w-0 to the type="month" input. Use consistent h-9 height across all filters. The layout should be symmetrical and visually balanced.
+
+---
+
+Bug #32: Downloaded PDF: Replace description with Quote #
+Description: On the downloaded PDF, the long job description appears directly under the Quote header and overflows the page. Instead of displaying any description, the PDF should show only a clean Quote # reference in the format Quote # == YYYY-MM-DD_###.
+Fix: Remove the description from the PDF entirely. Replace it with Quote # == YYYY-MM-DD_### in the header. No description should appear anywhere on the PDF. The description is already handled in the body (Bug #27 is already fixed), so this is a header-only change.
+
+---
+
+Bug #35: Email template: {{client name}} renders as 'there' instead of actual client name
+Description: When sending a quote email, the email template placeholder {{clientName}} renders as 'there' instead of the actual client's name. The email shows 'Hi there,' instead of 'Hi John,'.
+Fix: Trace the clientName from the EmailQuoteDialog through to the applyEmailPlaceholders function in lib/email-template.ts. Ensure clientName is being passed correctly from the frontend request to the backend. The fallback should only be used if clientName is empty or undefined.
+
+---
+
+Enhancement #36: Quote Builder – Clear description on 'New Quotes' and 'Try it now'
+Description: When navigating to the Quote Builder via 'New Quotes' or 'Try it now', the description input box is pre-filled with a previous template description.
+Fix: When entering via 'New Quotes' or 'Try it now', the description input box should be empty with only a placeholder text: 'e.g., "I need a plumber to fix a leaking pipe..."'. Clear any local storage data that may be pre-filling the description. If the user navigates via 'Load Template', the description should be populated with the template's description."

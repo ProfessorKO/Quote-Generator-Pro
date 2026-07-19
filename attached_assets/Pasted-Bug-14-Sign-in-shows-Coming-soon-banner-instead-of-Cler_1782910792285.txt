@@ -1,0 +1,114 @@
+Bug #14: Sign-in shows 'Coming soon' banner instead of Clerk auth
+
+· Replace the stub 'Sign in' button with Clerk's <SignInButton mode="modal"> component.
+· Remove the 'Accounts are coming soon' banner from the New Template page.
+· Ensure the auth modal opens when 'Sign in' is clicked.
+· After successful sign-in, redirect the user to the dashboard.
+
+Bug #15: Google OAuth shows 'Clerk' instead of QuoteCraft
+
+· The fix is in the Clerk dashboard – update the Application Name from 'Clerk' to 'QuoteCraft'.
+· Also update email templates and branding to show QuoteCraft instead of Clerk.
+
+Bug #16: Verify Email OTP input box missing border/styling
+
+· Identify the OTP component (likely Clerk's <SignIn /> or <SignUp />).
+· Ensure all 6 OTP input boxes have consistent styling (border, background, size, text alignment).
+· Fix the first input so it matches the others exactly.
+· If using Clerk's appearance prop, add custom styles for the OTP component.
+
+Bug #17: Dashboard quote month filter missing label/header
+
+· Add a clear label to the 4th filter: 'Month' or 'Quote Month'.
+· Ensure the label is visible at all times (not just on click).
+· All 4 filters should have consistent styling and labeling.
+
+Enhancement #18: Download button shows quote value causing confusion
+
+· Remove the quote value from the Download button.
+· Change the button label to 'Download PDF' or 'Download Quote'.
+· Display the quote total separately in the totals section (e.g., 'Quote Total: $523.50').
+
+Bug #19: Address validation timing bug
+
+· The address should ONLY be validated when the user has finished typing (debounce) OR when they leave the field (onBlur).
+· Add a 500ms debounce to the address validation (or validate on blur only).
+· While the user is typing, do not show validation errors (or clear them as they type).
+· Show specific error messages for incomplete addresses.
+
+Bug #20: Email Quote page: Self-email not handled
+
+· Add a backend check: if clientEmail === user.email, return a specific error.
+· Error message: 'You cannot send a quote to your own email address. Please enter the client's email.'
+· Highlight the email field with a red border and show the error message below.
+
+Bug #21: Dashboard: Quotes marked 'Emailed' when email was never sent
+
+· The quote should ONLY be marked as 'Emailed' if the email was successfully sent.
+· Save the quote to history AFTER the email is sent, not before.
+· If the email fails, show an error and do NOT change the status to 'Emailed'.
+· Consider adding statuses: 'Draft', 'Sent', 'Failed', 'Cancelled'.
+
+Bug #22: Form data lost on refresh/timeout
+
+· Auto-save form data to localStorage as the user types (on every change).
+· When the user returns to the page, restore the saved data automatically.
+· Clear the saved data when: form is submitted, user cancels, or user discards draft.
+· Apply to ALL forms: Email Quote, New Quote, Profile Settings, Template Editor.
+· Show a subtle toast: 'Draft restored' when data is restored.
+
+Bug #23: Email quote missing business profile details
+
+· Define required business profile fields: Business Name, Contact Name, ABN, Address.
+· Before sending a quote, check if the business profile is complete.
+· If incomplete, block the send and show: 'Please complete your business profile before sending quotes. Missing: [list]'
+· Provide a button to navigate to Profile Settings.
+· Build the email body using the business profile data (contact name, business name, ABN, mobile, address).
+
+Bug #24: Resend email configuration – domain not verified
+
+· Check the Resend configuration: RESEND_API_KEY and FROM_EMAIL exist in environment variables.
+· Improve error handling to return specific error messages:
+  · Domain not verified → 'Email domain not verified. Please verify your domain in Resend settings.'
+  · Invalid 'from' address → 'Invalid "from" email address. Please check your settings.'
+  · API key missing → 'Email service configuration error. Please contact support.'
+  · Rate limited → 'Too many emails sent. Please wait a few minutes.'
+· The frontend should display the specific error message from the backend.
+
+Bug #25: Mobile phone field: No validation on Download PDF page
+
+· Create a reusable <MobileInput /> component with consistent validation:
+  · Fixed +61 4 prefix (read-only)
+  · User enters exactly 8 digits
+  · Max length 8 digits
+  · Only numeric input allowed
+· Validation rules: required, exactly 8 digits.
+· Error: 'Please enter all 8 digits of your mobile number. (X/8 entered)'
+· Apply to: Registration, Download PDF, Profile Settings, Email Quote.
+
+Enhancement #26: Mobile prefix: +61 4 → +61-04
+
+· Change the fixed prefix from +61 4 to +61-04 in the mobile input field.
+· Update display format across all pages: +61-04 XXXX XXXX.
+· Database storage: Normalize to +61-04XXXXXXXX.
+
+Bug #27: Branded PDF: Description overflows page when too long
+
+· Enable text wrapping in the PDF description field using flexWrap: 'wrap' and wordBreak: 'break-word'.
+· Add a character limit of 500 characters for the description input field.
+· If the description exceeds 500 characters, truncate it and add ... (ellipsis).
+· For extremely long descriptions, split the content across multiple pages.
+· Add a note: 'Continued on next page...' if the description spans multiple pages.
+
+Enhancement #28: PDF filename: Editable with naming convention
+
+· Pre-populate the filename field with the appropriate convention:
+  · Downloaded: Quote_{{BusinessName}}_Download_{{DownloadDate}}_###
+  · Emailed: Quote_{{BusinessName}}_{{ClientName}}_###
+· User can edit the filename before downloading/emailing.
+· Validation: required, max 80 characters, sanitized.
+· Preview: shows [filename].pdf while typing.
+· Sequence numbers: per-user, per-year (reset to 001 each year).
+· Sanitize: remove special characters, replace spaces with underscores.
+· Hint: show the suggested format below the input.
+· Apply to: Download PDF page AND Email Quote page."
