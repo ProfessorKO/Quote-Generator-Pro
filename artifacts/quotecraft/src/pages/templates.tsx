@@ -67,8 +67,8 @@ export default function Templates() {
 
         {/* CP6 — free-tier template slot usage banner */}
         {billing && billing.plan === "free" && (
-          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <p className="min-w-0 flex-1 break-words text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">
                 {Math.min(billing.templatesCount, billing.limits.templates)} of{" "}
                 {billing.limits.templates}

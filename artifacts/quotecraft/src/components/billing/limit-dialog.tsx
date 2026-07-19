@@ -34,8 +34,18 @@ const COPY: Record<LimitAction, { title: string; body: string }> = {
   },
   templates: {
     title: "You've used all 5 free template slots",
-    body: "The free plan includes 5 saved templates. Go Pro for unlimited templates, or buy credits — 1 credit saves 1 extra template. Your existing templates always stay editable.",
+    body: "The free plan includes 5 saved template slots — this is a fixed limit, not a monthly allowance. Go Pro for unlimited templates, or buy credits — 1 credit saves 1 extra template.",
   },
+};
+
+// Templates are a hard slot limit (5 at any time) and never reset; the other
+// metered actions are monthly allowances that reset on the 1st (Sydney time).
+const FOOTNOTE: Record<LimitAction, string> = {
+  newQuotes: "Free limits reset on the 1st of each month.",
+  voiceEdits: "Free limits reset on the 1st of each month.",
+  emailsSent: "Free limits reset on the 1st of each month.",
+  pdfDownloads: "Free limits reset on the 1st of each month.",
+  templates: "Existing templates always stay editable.",
 };
 
 interface LimitDialogProps {
@@ -45,8 +55,9 @@ interface LimitDialogProps {
 
 /**
  * CP1–CP5 — shown when the server answers 402 LIMIT_REACHED. Offers the Pro
- * subscription and credit packs; free limits reset on the 1st of each month
- * (Sydney time).
+ * subscription and credit packs. Monthly-metered actions (quotes, voice
+ * edits, emails, downloads) reset on the 1st of each month (Sydney time);
+ * the template slot limit is a hard cap and never resets.
  */
 export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
   const checkout = useCreateBillingCheckout();
@@ -84,8 +95,10 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
     >
       <DialogContent className="sm:max-w-md w-[92vw] rounded-xl">
         <DialogHeader>
-          <DialogTitle>{copy?.title}</DialogTitle>
-          <DialogDescription>{copy?.body}</DialogDescription>
+          <DialogTitle className="break-words pr-6">{copy?.title}</DialogTitle>
+          <DialogDescription className="break-words">
+            {copy?.body}
+          </DialogDescription>
         </DialogHeader>
 
         {showPacks ? (
@@ -130,9 +143,11 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
             Maybe later
           </Button>
         </DialogFooter>
-        <p className="text-[11px] text-center text-muted-foreground">
-          Free limits reset on the 1st of each month.
-        </p>
+        {action && (
+          <p className="text-[11px] text-center text-muted-foreground break-words">
+            {FOOTNOTE[action]}
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );
