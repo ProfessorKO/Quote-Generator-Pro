@@ -11,11 +11,36 @@ import { getUncachableStripeClient } from "../lib/stripeClient";
 import {
   getBillingStatus,
   getSubscriptionInfo,
+  setProfileSubscriptionState,
   consumeAction,
   LimitReachedError,
   limitReachedResponse,
 } from "../lib/billing";
+
 import { upsertCurrentUser } from "../lib/user-sync";
+
+/**
+ * The stripe.* schema is synced asynchronously, so after we change a
+ * subscription via the Stripe API the mirror can lag for a moment. Writing
+ * the flag locally too keeps GET /billing/status (which the client refetches
+ * immediately after cancel/undo — #44) consistent right away; the next sync
+ * simply reasserts the same value.
+ */
+async function setMirrorCancelFlag(
+  subscriptionId: string,
+  cancelAtPeriodEnd: boolean,
+): Promise<void> {
+  try {
+    await db.execute(sql`
+      UPDATE stripe.subscriptions
+      SET cancel_at_period_end = ${cancelAtPeriodEnd}
+      WHERE id = ${subscriptionId}
+    `);
+  } catch (err) {
+    // Non-fatal: Stripe has the truth and the sync will catch up.
+    console.warn("Failed to update local subscription mirror:", err);
+  }
+}
 
 const router: IRouter = Router();
 
@@ -128,6 +153,8 @@ router.post("/billing/checkout", requireAuth, async (req, res): Promise<void> =>
       await stripe.subscriptions.update(sub.subscriptionId, {
         cancel_at_period_end: false,
       });
+      await setMirrorCancelFlag(sub.subscriptionId, false);
+      await setProfileSubscriptionState(userId, "paid", "active");
       res.json({ resumed: true });
       return;
     }
@@ -207,7 +234,12 @@ router.post("/billing/confirm", requireAuth, async (req, res): Promise<void> => 
     }
     await db
       .update(userProfilesTable)
-      .set({ stripeSubscriptionId: subscriptionId, updatedAt: new Date() })
+      .set({
+        stripeSubscriptionId: subscriptionId,
+        plan: "paid",
+        subscriptionStatus: "active",
+        updatedAt: new Date(),
+      })
       .where(eq(userProfilesTable.userId, userId));
     res.json({ result: "subscription_active" });
     return;
@@ -274,6 +306,9 @@ router.post("/billing/cancel", requireAuth, async (req, res): Promise<void> => {
       ? { metadata: { cancel_reason: reason.slice(0, 200) } }
       : {}),
   });
+  await setMirrorCancelFlag(sub.subscriptionId, true);
+  // Still "paid" until the period ends, but the subscription is cancelled.
+  await setProfileSubscriptionState(userId, "paid", "cancelled");
 
   res.json({
     result: "cancelled_at_period_end",

@@ -2,3 +2,4 @@
 - [QuoteCraft billing conventions](quotecraft-billing.md) — 402 LIMIT_REACHED contract, metering rules (voice/email/PDF/templates), atomic template-slot insert, checkout-confirm retry rule.
 - [GitHub push workaround](github-push-workaround.md) — push via helper branch + GitHub API merge; clean URL + host-scoped Basic auth header; chunked pushes; connector token quirks.
 - [React Query + Clerk cache reset](react-query-clerk-reset.md) — never qc.clear() on user change; cancelQueries+resetQueries or in-flight observers spin forever.
+- [Stripe mirror lag](stripe-mirror-lag.md) — stripe.* sync lags Stripe API; never downgrade plan on a missing mirror row, write changed flags locally after API mutations.

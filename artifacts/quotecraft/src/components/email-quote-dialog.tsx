@@ -29,7 +29,7 @@ import {
   type QuoteSettings,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { buildPdf, pdfToBase64, type PdfHeader } from "@/lib/pdf";
+import { buildPdf, pdfToBase64, MAX_NOTES_CHARS, type PdfHeader } from "@/lib/pdf";
 import { buildQuoteRecord, computeTotals } from "@/lib/quote-record";
 import {
   formatMobileDisplay,
@@ -84,6 +84,11 @@ export function EmailQuoteDialog({
     query: { enabled: open, queryKey: getGetNextQuoteSequenceQueryKey() },
   });
 
+  // Enhancement #42 — sender's contact name for the PDF header (same as the
+  // Download PDF flow). Pre-populated from the Clerk account when opened.
+  const [contactName, setContactName] = useState("");
+  // Enhancement #41 — optional notes printed on the attached PDF.
+  const [notes, setNotes] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [clientAddress, setClientAddress] = useState("");
@@ -175,6 +180,14 @@ export function EmailQuoteDialog({
     if (open) setErrors({});
   }, [open]);
 
+  // (Re)seed contact name + reset notes when the dialog opens (#42, #41).
+  useEffect(() => {
+    if (!open) return;
+    setContactName(user?.fullName ?? "");
+    setNotes("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user]);
+
   // Draft autosave (Bug #22). Declared after the seeding effect so a saved
   // draft restores over the template-seeded subject/body.
   const { clearDraft } = useFormDraft("quotecraft:draft:email-quote", {
@@ -220,6 +233,8 @@ export function EmailQuoteDialog({
   // field's error (Bug #19).
   const fieldError = (field: string, value: string): string | null => {
     switch (field) {
+      case "contactName":
+        return value.trim() ? null : "Contact name is required";
       case "clientName":
         return value.trim() ? null : "Client name is required";
       case "clientEmail": {
@@ -255,6 +270,7 @@ export function EmailQuoteDialog({
       return el ? el.value : fallback;
     };
     const values = {
+      contactName: domVal("cl-contact", contactName),
       clientName: domVal("cl-name", clientName),
       clientEmail: domVal("cl-email", clientEmail),
       clientAddress: domVal("cl-address", clientAddress),
@@ -264,6 +280,7 @@ export function EmailQuoteDialog({
       filename: domVal("cl-filename", filename),
     };
     // Sync state so the display stays consistent with what we submit.
+    setContactName(values.contactName);
     setClientName(values.clientName);
     setClientEmail(values.clientEmail);
     setClientAddress(values.clientAddress);
@@ -275,6 +292,7 @@ export function EmailQuoteDialog({
   };
 
   const validate = (values: {
+    contactName: string;
     clientName: string;
     clientEmail: string;
     subject: string;
@@ -282,6 +300,7 @@ export function EmailQuoteDialog({
     filename: string;
   }) => {
     const checks: Array<[string, string]> = [
+      ["contactName", values.contactName],
       ["clientName", values.clientName],
       ["clientEmail", values.clientEmail],
       ["subject", values.subject],
@@ -299,10 +318,12 @@ export function EmailQuoteDialog({
 
   const buildAttachment = (
     filenameInput: string,
+    contactNameInput: string,
   ): { base64: string; filename: string } => {
     const header: PdfHeader = {
       businessName,
-      contactName: user?.fullName ?? "",
+      // #42 — the user-editable contact name goes onto the PDF header.
+      contactName: contactNameInput.trim(),
       address: profile?.address ?? "",
       email: user?.primaryEmailAddress?.emailAddress ?? "",
       mobile: profile?.mobile
@@ -318,6 +339,7 @@ export function EmailQuoteDialog({
       lineItems,
       settings,
       totals,
+      notes,
     });
     // Editable, sanitized filename (#28).
     return {
@@ -348,6 +370,7 @@ export function EmailQuoteDialog({
 
     const { base64, filename: attachmentFilename } = buildAttachment(
       values.filename,
+      values.contactName,
     );
 
     // History is recorded only after a successful send (Bug #21): we hand the
@@ -442,6 +465,26 @@ export function EmailQuoteDialog({
         )}
 
         <div className="space-y-3.5 py-1">
+          {/* Contact name (#42) — same position as the Download PDF dialog. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cl-contact">Contact name</Label>
+            <Input
+              id="cl-contact"
+              value={contactName}
+              onChange={(e) => {
+                setContactName(e.target.value);
+                setFieldError("contactName", null);
+              }}
+              onBlur={(e) => {
+                setContactName(e.target.value);
+                setFieldError("contactName", fieldError("contactName", e.target.value));
+              }}
+            />
+            {errors.contactName && (
+              <p className="text-xs text-destructive">{errors.contactName}</p>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="cl-name">Client name</Label>
             <Input
@@ -581,6 +624,25 @@ export function EmailQuoteDialog({
             {errors.body && (
               <p className="text-xs text-destructive">{errors.body}</p>
             )}
+          </div>
+
+          {/* Optional notes for the attached PDF (#41) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cl-notes">
+              Notes{" "}
+              <span className="text-muted-foreground font-normal">(opt)</span>
+            </Label>
+            <Textarea
+              id="cl-notes"
+              rows={3}
+              maxLength={MAX_NOTES_CHARS}
+              placeholder="e.g. To be paid by 3 installments. Payment to be made 14 days post invoice."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {notes.length}/{MAX_NOTES_CHARS}
+            </p>
           </div>
         </div>
 

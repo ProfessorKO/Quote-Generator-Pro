@@ -58,12 +58,20 @@ export async function getSubscriptionInfo(
   userId: string,
 ): Promise<SubscriptionInfo> {
   const [profile] = await db
-    .select({ subscriptionId: userProfilesTable.stripeSubscriptionId })
+    .select({
+      subscriptionId: userProfilesTable.stripeSubscriptionId,
+      plan: userProfilesTable.plan,
+      subscriptionStatus: userProfilesTable.subscriptionStatus,
+    })
     .from(userProfilesTable)
     .where(eq(userProfilesTable.userId, userId));
 
   const subscriptionId = profile?.subscriptionId ?? null;
   if (!subscriptionId) {
+    if (profile && profile.plan !== "free") {
+      // Defensive: no subscription reference — profile must say free.
+      await setProfileSubscriptionState(userId, "free", profile.subscriptionStatus === "never" ? "never" : "cancelled");
+    }
     return {
       plan: "free",
       subscriptionId: null,
@@ -92,13 +100,68 @@ export async function getSubscriptionInfo(
       }
     | undefined;
 
-  const active = row?.status === "active" || row?.status === "trialing";
+  // The stripe.* mirror syncs asynchronously. Right after checkout the
+  // subscription row may not exist here yet, even though /billing/confirm
+  // verified the payment with Stripe directly and set the profile to
+  // paid/active. In that window, trust the profile — never downgrade on a
+  // missing row.
+  if (!row) {
+    const trustedPro = profile?.plan === "paid";
+    return {
+      plan: trustedPro ? "pro" : "free",
+      subscriptionId,
+      cancelAtPeriodEnd: trustedPro
+        ? profile?.subscriptionStatus === "cancelled"
+        : false,
+      currentPeriodEnd: null,
+    };
+  }
+
+  const active = row.status === "active" || row.status === "trialing";
+  const cancelAtPeriodEnd = active ? Boolean(row.cancel_at_period_end) : false;
+
+  // Reconcile the denormalised user_profiles columns (#43) — only when the
+  // mirror has an authoritative row with a terminal/non-active status.
+  const expectedPlan: ProfilePlan = active ? "paid" : "free";
+  const expectedStatus: ProfileSubscriptionStatus =
+    active && !cancelAtPeriodEnd ? "active" : "cancelled";
+  if (
+    profile &&
+    (profile.plan !== expectedPlan ||
+      profile.subscriptionStatus !== expectedStatus)
+  ) {
+    await setProfileSubscriptionState(userId, expectedPlan, expectedStatus);
+  }
+
   return {
     plan: active ? "pro" : "free",
     subscriptionId,
-    cancelAtPeriodEnd: active ? Boolean(row?.cancel_at_period_end) : false,
+    cancelAtPeriodEnd,
     currentPeriodEnd: active ? (row?.current_period_end ?? null) : null,
   };
+}
+
+// ---- Denormalised subscription state on user_profiles (#43) ----
+
+export type ProfilePlan = "free" | "paid";
+export type ProfileSubscriptionStatus = "never" | "active" | "cancelled";
+
+/**
+ * Writes the denormalised plan/subscription_status columns on user_profiles.
+ * Called from checkout confirm, cancel, undo-cancel, and the reconciliation
+ * inside getSubscriptionInfo — every path that changes subscription state
+ * (including any manual/admin cancellation that goes through these routes)
+ * must use this same helper so the profile always mirrors Stripe.
+ */
+export async function setProfileSubscriptionState(
+  userId: string,
+  plan: ProfilePlan,
+  subscriptionStatus: ProfileSubscriptionStatus,
+): Promise<void> {
+  await db
+    .update(userProfilesTable)
+    .set({ plan, subscriptionStatus, updatedAt: new Date() })
+    .where(eq(userProfilesTable.userId, userId));
 }
 
 export interface ConsumeResult {

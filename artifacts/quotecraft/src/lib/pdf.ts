@@ -26,6 +26,9 @@ const FOOTER_MESSAGE =
 // Bug #27: cap description length so a single item can't balloon the PDF.
 export const MAX_DESCRIPTION_CHARS = 500;
 
+// Enhancement #41 — optional notes rendered after totals, before the footer.
+export const MAX_NOTES_CHARS = 500;
+
 const NAVY: [number, number, number] = [27, 44, 77];
 const AMBER: [number, number, number] = [242, 147, 13];
 const MUTED: [number, number, number] = [98, 109, 132];
@@ -43,8 +46,11 @@ export function buildPdf(params: {
   lineItems: QuoteLineItem[];
   settings: QuoteSettings;
   totals: QuoteTotals;
+  /** Enhancement #41 — optional notes shown after totals, before the footer. */
+  notes?: string;
 }): jsPDF {
   const { header, quoteNumber, lineItems, settings, totals } = params;
+  const notes = (params.notes ?? "").trim().slice(0, MAX_NOTES_CHARS);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 48;
@@ -209,6 +215,33 @@ export function buildPdf(params: {
   doc.line(labelX - 60, y - 6, valueX, y - 6);
   y += 8;
   totalRow("Total (incl. GST)", money(totals.total), true);
+
+  // ---- Notes (#41) ---- skipped entirely when empty.
+  if (notes) {
+    const noteLines: string[] = doc.splitTextToSize(notes, right - marginX);
+    const blockHeight = 16 + noteLines.length * 13;
+    if (y + blockHeight > bottomLimit) {
+      doc.addPage();
+      y = 56;
+    }
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...NAVY);
+    doc.text("Notes", marginX, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    for (const line of noteLines) {
+      if (y > bottomLimit) {
+        doc.addPage();
+        y = 56;
+      }
+      doc.text(line, marginX, y);
+      y += 13;
+    }
+  }
 
   // ---- Footer ----
   const footerY = doc.internal.pageSize.getHeight() - 48;

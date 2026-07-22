@@ -26,6 +26,14 @@ export const userProfilesTable = pgTable("user_profiles", {
   // Stripe (mirrored into the stripe.* schema by stripe-replit-sync).
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // Denormalised subscription state (#43). Stripe remains the source of
+  // truth; these columns mirror it so plain SQL/admin views can see the plan
+  // without joining the stripe.* schema. Kept in sync on checkout confirm,
+  // cancel, undo-cancel, and reconciled whenever billing status is read.
+  // plan: "free" | "paid"
+  plan: text("plan").notNull().default("free"),
+  // subscriptionStatus: "never" (no subscription yet) | "active" | "cancelled"
+  subscriptionStatus: text("subscription_status").notNull().default("never"),
   // Pay-as-you-go credit balance. 1 credit = 1 action (new quote, voice
   // edit, email, or PDF download). Credits never expire and are consumed
   // before free-tier limits are applied.

@@ -249,7 +249,11 @@ function ClerkProviderWithRoutes() {
             <Switch>
               <Route path="/" component={Landing} />
               <Route path="/quote" component={Home} />
-              <Route path="/templates" component={Templates} />
+              <Route path="/templates">
+                <Protected>
+                  <Templates />
+                </Protected>
+              </Route>
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
               <Route path="/post-auth" component={PostAuthGate} />

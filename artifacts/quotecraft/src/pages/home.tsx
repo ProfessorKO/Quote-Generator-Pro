@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Loader2, Save, Trash2, Plus, FileText, CheckCircle2, Download, Mail } from "lucide-react";
+import { Mic, Loader2, Save, Trash2, Plus, FileText, CheckCircle2, Download, Mail, Info, X } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/use-speech";
 import { useParseQuoteDescription, useApplyVoiceCommand, useCreateTemplate, getListTemplatesQueryKey, getListQuotesQueryKey, useCreateQuote, useGetTemplate, QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
 import { toast } from "sonner";
@@ -263,6 +263,7 @@ export default function Home() {
 
   const [exportOpen, setExportOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [voiceHelpOpen, setVoiceHelpOpen] = useState(false);
 
   // Entitlement = signed in with a verified email (Iteration 3 §3.2). A
   // logged-in-but-unverified user is treated as not entitled.
@@ -595,6 +596,12 @@ export default function Home() {
     });
   };
 
+  // Enhancement #48 — line-item descriptions are directly editable (pre-populated
+  // when a template loads, or after voice/AI generation).
+  const handleUpdateLabel = (id: string, label: string) => {
+    setLineItems(items => items.map(item => item.id === id ? { ...item, label } : item));
+  };
+
   const handleUpdateItem = (id: string, field: keyof QuoteLineItem, value: number) => {
     // Overtime is a percentage and must never go negative (matches server clamp).
     const v = field === "overtimePercent" ? Math.max(0, value) : value;
@@ -780,6 +787,19 @@ export default function Home() {
               "Generate Quote Form"
             )}
           </Button>
+          {/* Enhancement #45 — quick way to start a fresh description. */}
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => setDescription("")}
+              disabled={parseQuote.isPending || !description}
+            >
+              <X className="w-3.5 h-3.5" />
+              Clear Description
+            </Button>
+          </div>
         </div>
 
         <AnimatePresence>
@@ -805,8 +825,14 @@ export default function Home() {
                   <Card key={item.id} className="overflow-hidden border-border/50 shadow-sm">
                     <CardContent className="p-4 space-y-4">
                       <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <p className="font-semibold text-sm">{item.label}</p>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          {/* Editable description (#48) */}
+                          <Input
+                            value={item.label}
+                            aria-label="Line item description"
+                            className="h-9 font-semibold text-sm"
+                            onChange={(e) => handleUpdateLabel(item.id, e.target.value)}
+                          />
                           <p className="text-xs text-muted-foreground">Voice cue: <span className="font-mono bg-muted px-1 py-0.5 rounded">{item.voiceKey}</span></p>
                         </div>
                         <div className="text-right">
@@ -986,7 +1012,17 @@ export default function Home() {
       </div>
 
       {hasParsed && (
-        <div className="fixed bottom-20 right-4 z-50">
+        <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2">
+          {/* Enhancement #39 — examples of what the voice editor understands. */}
+          <Button
+            size="icon"
+            variant="secondary"
+            aria-label="See voice command examples"
+            className="h-9 w-9 rounded-full shadow-lg"
+            onClick={() => setVoiceHelpOpen(true)}
+          >
+            <Info className="w-4 h-4" />
+          </Button>
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1014,6 +1050,31 @@ export default function Home() {
           </TooltipProvider>
         </div>
       )}
+
+      {/* Enhancement #39 — voice command examples popup. Closes on ✕ or
+          tapping outside (built-in Dialog behaviour). */}
+      <Dialog open={voiceHelpOpen} onOpenChange={setVoiceHelpOpen}>
+        <DialogContent className="sm:max-w-md w-[92vw] max-w-[92vw] rounded-xl">
+          <DialogHeader>
+            <DialogTitle>Voice command examples</DialogTitle>
+            <DialogDescription>
+              Tap "Edit Quote" and say things like:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5 break-words">
+            <li>"Add a line item called copper pipe at $15 per meter"</li>
+            <li>"Add a $50 discount"</li>
+            <li>"Change the unit price of pipes to $12.50"</li>
+            <li>"Change quantity of pipes to 10"</li>
+            <li>"Rename item 1 to brass fittings"</li>
+            <li>"Remove the call-out fee"</li>
+            <li>"Make this quote GST inclusive"</li>
+            <li>"Add 15% overtime to labour"</li>
+            <li>"Add a $80 call-out fee"</li>
+            <li>"Apply public holiday surcharge"</li>
+          </ul>
+        </DialogContent>
+      </Dialog>
 
       <VoiceOverlay
         open={listeningMic !== null}
