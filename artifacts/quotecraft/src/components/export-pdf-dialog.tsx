@@ -28,7 +28,7 @@ import {
   type QuoteSettings,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { buildPdf, downloadPdf, type PdfHeader } from "@/lib/pdf";
+import { buildPdf, downloadPdf, MAX_NOTES_CHARS, type PdfHeader } from "@/lib/pdf";
 import { LimitDialog } from "@/components/billing/limit-dialog";
 import {
   limitReachedAction,
@@ -91,6 +91,8 @@ export function ExportPdfDialog({
   const [abn, setAbn] = useState("");
   const [acn, setAcn] = useState("");
   const [filename, setFilename] = useState("");
+  // Enhancement #41 — optional notes printed on the PDF after the totals.
+  const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   // CP4 — free-tier PDF download limit reached (402 from the usage check).
@@ -113,6 +115,7 @@ export function ExportPdfDialog({
     setAddress(profile?.address ?? "");
     setAbn(sanitizeAbn(profile?.abn ?? ""));
     setAcn(sanitizeAcn(profile?.acn ?? ""));
+    setNotes("");
     setErrors({});
     filenameDirtyRef.current = false;
   }, [open, profile, user]);
@@ -262,6 +265,7 @@ export function ExportPdfDialog({
         lineItems,
         settings,
         totals,
+        notes,
       });
 
       // Record the quote to history (§11) BEFORE handing the file to the
@@ -525,6 +529,25 @@ export function ExportPdfDialog({
             )}
             <p className="text-xs text-muted-foreground">
               Suggested format: Quote_BusinessName_Download_Date_###
+            </p>
+          </div>
+
+          {/* Optional notes for the PDF (#41) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="pdf-notes">
+              Notes{" "}
+              <span className="text-muted-foreground font-normal">(opt)</span>
+            </Label>
+            <Textarea
+              id="pdf-notes"
+              rows={3}
+              maxLength={MAX_NOTES_CHARS}
+              placeholder="e.g. To be paid by 3 installments. Payment to be made 14 days post invoice."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {notes.length}/{MAX_NOTES_CHARS}
             </p>
           </div>
 

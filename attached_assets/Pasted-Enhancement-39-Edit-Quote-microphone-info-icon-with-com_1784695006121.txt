@@ -1,0 +1,121 @@
+Enhancement #39: Edit Quote microphone — info icon with command examples
+Description: Add an info icon (ℹ️) on the Edit Quote microphone that opens a popup with voice command examples.
+Fix:
+
+· Add an info icon on top of or next to the Edit Quote microphone.
+· Clicking the icon opens a popup with the following examples:
+  · 'e.g. Add a line item called copper pipe at $15 per meter'
+  · 'Add a $50 discount'
+  · 'Change the unit price of pipes to $12.50'
+  · 'Change quantity of pipes to 10'
+  · 'Rename item 1 to brass fittings'
+  · 'Remove the call-out fee'
+  · 'Make this quote GST inclusive'
+  · 'Add 15% overtime to labour'
+  · 'Add a $80 call-out fee'
+  · 'Apply public holiday surcharge'
+· Close the popup when the user taps outside or clicks the close (✕) button.
+
+---
+
+Bug #40: Templates page locked from visitors
+Description: Visitors can currently view the Templates page, but the page should be locked from visitors. Clicking on Templates page (bottom nav alongside New Quote) should redirect users to sign-in page.
+Fix:
+
+· In App.tsx, wrap the /templates route with the <Protected> component.
+· In pages/templates.tsx, add a redirect to /sign-in if the user is not authenticated.
+· Visitors clicking on "Templates" should be redirected to the sign-in page.
+
+---
+
+Enhancement #41: PDF export — Add 'Notes' text input field (500 characters) — with placeholder hint
+Description: Add a 'Notes' text input field to both Download PDF and Email Quote forms.
+Fix:
+
+· Add a "Notes" textarea field to both the Download PDF and Email Quote forms.
+· Field is optional (can be left blank).
+· Max length: 500 characters.
+· Display a character counter: X/500.
+· Add a placeholder hint: 'e.g. To be paid by 3 installments. Payment to be made 14 days post invoice.'
+· Notes content should appear on the PDF before the footer (after totals, before "Thank you for your business").
+· If notes are empty, skip the notes section on the PDF.
+
+---
+
+Enhancement #42: Email Quote — Add 'Contact Name' field to match Download PDF flow
+Description: The Email Quote form should have a Contact Name field to match the Download PDF flow.
+Fix:
+
+· Add a 'Contact Name' field to the Email Quote form.
+· Field should be mandatory (same as Download PDF).
+· Position: same position as where it is placed on Download PDF.
+· Pre-populate from the business profile if available.
+· Add validation: 'Contact name is required.'
+· Pass the contact name to the PDF header when generating the attachment.
+
+---
+
+Bug #43: After cancelling subscription, Stripe subscription ID still persists in user_profile table
+Description: After a user cancels their Pro subscription, the stripeSubscriptionId field in the user_profile table still contains the cancelled subscription ID.
+Fix:
+
+· stripeSubscriptionId can stay but add new fields:
+  · plan → Boolean ('free' if never subscribed or cancelled, 'paid' if active subscription)
+  · subscriptionStatus → Boolean ('active' / 'cancelled' / 'never')
+· Ensure the manual cancellation function follows the same logic.
+· Verify the schema includes stripeSubscriptionId, plan, and subscriptionStatus fields.
+
+---
+
+Bug #44: Cancel Subscription — UI not refreshing after action (Cancel/Undo)
+Description: After cancelling or undoing a subscription, the Settings page UI does not refresh to reflect the new status.
+Fix:
+
+· After cancelling, invalidate React Query queries to refresh the UI.
+· After undoing, invalidate React Query queries to refresh the UI.
+· Conditionally render buttons based on the subscription status:
+  · 'active' → Show "Cancel Subscription" button
+  · 'cancelled' → Show "Keep Pro — Undo Cancellation" button and expiry date
+
+---
+
+Enhancement #45: New Quote microphone — Add Clear Description button below Generate Quote button
+Description: Add a "Clear Description" button below the Generate Quote button to clear the description input box.
+Fix:
+
+· Add a "Clear Description" button below the Generate Quote button.
+· Clicking the button clears the description textarea.
+· Button should be small and unobtrusive (e.g., variant="outline" size="sm").
+· Add an ✕ or 🗑️ icon to the button.
+
+---
+
+Enhancement #46: Templates tab (bottom nav alongside Dashboard / New Quote) — Allow template editing directly from Templates tab
+Description: Allow template editing directly from the Templates tab (bottom navigation alongside New Quote and Dashboard).
+Fix:
+
+· Add an Edit (✏️) button to each template card in the Templates tab (bottom nav alongside New Quote / Dashboard).
+· Clicking Edit opens a popup (same as the one after you click on Edit on the Template tab — Dashboard Template tab alongside Quote / Email).
+· Templates list refreshes automatically after saving.
+
+---
+
+Bug #47: After purchasing credits, Credits balance still shows 0 on Settings page
+Description: After purchasing credits, the Credits balance on the Settings page still shows 0. The UI does not refresh to reflect the new balance.
+Fix:
+
+· After a successful credit purchase, invalidate React Query queries to refresh the UI.
+· Invalidate getGetBillingStatusQueryKey() and any other queries that contain the credits data.
+· Ensure the credits field uses the latest data from the API (not a stale value).
+· Verify the credit purchase webhook correctly updates the credits field in the database.
+
+---
+
+Enhancement #48: Template loaded onto New Quote page — Pre-populate line item description in editable text box
+Description: Once a template is loaded onto the New Quote page, the line item description should be pre-populated in an editable text box, allowing the user to modify it before generating the quote.
+Fix:
+
+· When a template is loaded, each line item's description field should populate an editable text input.
+· The text box should be clearly visible and allow the user to edit the description.
+· Changes to the description should update the line item state.
+· This applies to both manual template loading and clicking a template from the Templates tab."

@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useListTemplates, useDeleteTemplate, getListTemplatesQueryKey, QuoteTemplate } from "@workspace/api-client-react";
-import { Loader2, FileText, Trash2, ChevronRight, PlusCircle, Crown } from "lucide-react";
+import { Loader2, FileText, Trash2, ChevronRight, PlusCircle, Crown, Pencil } from "lucide-react";
+import { TemplateEditDialog } from "@/components/template-edit-dialog";
 import { useBilling } from "@/lib/billing";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useAuth } from "@clerk/react";
 
 const TEMPLATES_CACHE_KEY = "quotecraft.templates.cache";
 
@@ -23,6 +25,12 @@ function readTemplatesCache(): QuoteTemplate[] | undefined {
 
 export default function Templates() {
   const [, setLocation] = useLocation();
+  // Bug #40 — defensive guard: visitors must never see this page even if the
+  // route-level <Protected> wrapper is bypassed.
+  const { isLoaded, isSignedIn } = useAuth();
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) setLocation("/sign-in");
+  }, [isLoaded, isSignedIn, setLocation]);
   const queryClient = useQueryClient();
   const { data: templates, isLoading } = useListTemplates({
     query: {
@@ -35,6 +43,9 @@ export default function Templates() {
   });
   const deleteTemplate = useDeleteTemplate();
   const { data: billing } = useBilling();
+  // Enhancement #46 — edit a template directly from this tab (same dialog as
+  // the Dashboard's Templates tab).
+  const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
 
   useEffect(() => {
     if (templates) {
@@ -67,8 +78,8 @@ export default function Templates() {
 
         {/* CP6 — free-tier template slot usage banner */}
         {billing && billing.plan === "free" && (
-          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <p className="min-w-0 flex-1 break-words text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">
                 {Math.min(billing.templatesCount, billing.limits.templates)} of{" "}
                 {billing.limits.templates}
@@ -131,14 +142,29 @@ export default function Templates() {
                   </div>
                   
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mr-2"
-                      onClick={(e) => handleDelete(template.id, e)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 -mr-2">
+                      {/* Edit template (#46) */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        aria-label={`Edit template ${template.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTemplate(template);
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => handleDelete(template.id, e)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <div className="h-8 w-8 flex items-center justify-center text-primary/40 group-hover:text-primary transition-colors">
                       <ChevronRight className="w-5 h-5" />
                     </div>
@@ -149,6 +175,12 @@ export default function Templates() {
           </div>
         )}
       </div>
+
+      {/* Edit template dialog (#46) — list refreshes via query invalidation on save. */}
+      <TemplateEditDialog
+        template={editingTemplate}
+        onOpenChange={(o) => !o && setEditingTemplate(null)}
+      />
     </Layout>
   );
 }

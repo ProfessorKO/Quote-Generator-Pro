@@ -5,6 +5,7 @@ import {
   SignUp,
   Show,
   useClerk,
+  useUser,
 } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -19,7 +20,7 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
@@ -116,9 +117,27 @@ function PageFallback() {
   );
 }
 
+// #49 — every way of reaching sign-in/sign-up must offer a way back out.
+// Rendered on the auth pages themselves (not by the trigger), so it shows
+// regardless of whether the user arrived via a button, the Templates tab
+// redirect, or a direct link. Always exits to the public quote builder.
+function AuthCloseButton() {
+  const [, setLocation] = useLocation();
+  return (
+    <button
+      onClick={() => setLocation("/quote")}
+      aria-label="Close sign-in"
+      className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white text-[#626D84] shadow-md ring-1 ring-[#D1D6E0] hover:text-[#13203A] hover:bg-[#F4F6F9] transition-colors"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  );
+}
+
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+      <AuthCloseButton />
       <SignIn
         routing="path"
         path={`${basePath}/sign-in`}
@@ -131,7 +150,8 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+      <AuthCloseButton />
       <SignUp
         routing="path"
         path={`${basePath}/sign-up`}
@@ -145,13 +165,21 @@ function SignUpPage() {
 // After sign-in/sign-up: send new users to complete their business profile,
 // otherwise resume a pending gated action (→ /quote) or land on the dashboard.
 function PostAuthGate() {
-  const { data, isLoading, isError, isSuccess, error } = useGetBusinessProfile({
-    query: { retry: false, queryKey: getGetBusinessProfileQueryKey() },
+  const { isLoaded, isSignedIn } = useUser();
+  const { data, isError, isSuccess, error } = useGetBusinessProfile({
+    query: {
+      retry: false,
+      queryKey: getGetBusinessProfileQueryKey(),
+      // Don't fire until Clerk has an active session — an early request
+      // would 401 and mis-route the user.
+      enabled: isLoaded && !!isSignedIn,
+    },
   });
 
   const resumePath = peekPendingAction() ? "/quote" : "/dashboard";
 
-  if (isLoading) return <PageFallback />;
+  if (!isLoaded) return <PageFallback />;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
   if (isError) {
     // Only a genuine "profile not found" (404) means the user must onboard.
     // Transient/auth/server errors must NOT force onboarding — fall back to the
@@ -159,8 +187,8 @@ function PostAuthGate() {
     const status = (error as { status?: number } | null)?.status;
     return <Redirect to={status === 404 ? "/complete-profile" : resumePath} />;
   }
-  if (isSuccess && data) {
-    return <Redirect to={resumePath} />;
+  if (isSuccess) {
+    return <Redirect to={data ? resumePath : "/complete-profile"} />;
   }
   return <PageFallback />;
 }
@@ -190,7 +218,13 @@ function ClerkQueryClientCacheInvalidator() {
         prevUserIdRef.current !== undefined &&
         prevUserIdRef.current !== userId
       ) {
-        qc.clear();
+        // Reset (not clear) so components with in-flight queries — e.g.
+        // PostAuthGate right after sign-in — are refetched instead of being
+        // left stuck in a permanent loading state. `clear()` removes active
+        // queries without notifying observers, which caused an infinite
+        // spinner after sign-in until a manual refresh.
+        void qc.cancelQueries();
+        void qc.resetQueries();
       }
       prevUserIdRef.current = userId;
     });
@@ -234,7 +268,11 @@ function ClerkProviderWithRoutes() {
             <Switch>
               <Route path="/" component={Landing} />
               <Route path="/quote" component={Home} />
-              <Route path="/templates" component={Templates} />
+              <Route path="/templates">
+                <Protected>
+                  <Templates />
+                </Protected>
+              </Route>
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
               <Route path="/post-auth" component={PostAuthGate} />

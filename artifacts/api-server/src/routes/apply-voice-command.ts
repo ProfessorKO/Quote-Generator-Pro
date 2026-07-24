@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { ApplyVoiceCommandBody, ApplyVoiceCommandResponse } from "@workspace/api-zod";
-import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { optionalAuth, type AuthedRequest } from "../lib/auth";
 import {
   getBillingStatus,
   consumeAction,
@@ -12,26 +12,30 @@ import { upsertCurrentUser } from "../lib/user-sync";
 
 const router: IRouter = Router();
 
-router.post("/apply-voice-command", requireAuth, async (req, res): Promise<void> => {
+router.post("/apply-voice-command", optionalAuth, async (req, res): Promise<void> => {
   const parsed = ApplyVoiceCommandBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
-  // Voice edits are metered, but per spec only SUCCESSFUL applications count.
+  // Visitors (no session) may edit their in-progress quote by voice — the
+  // sign-up gate is at download/email/save-template. For logged-in users,
+  // voice edits are metered, but per spec only SUCCESSFUL applications count.
   // Cheap pre-check here rejects users already at their limit before we spend
   // an AI call; the actual consumption happens after a successful apply.
-  const userId = (req as AuthedRequest).userId;
-  await upsertCurrentUser(userId);
-  const billing = await getBillingStatus(userId);
-  if (
-    billing.plan === "free" &&
-    billing.credits === 0 &&
-    billing.usage.voiceEdits >= billing.limits.voiceEdits
-  ) {
-    res.status(402).json(limitReachedResponse("voiceEdits"));
-    return;
+  const userId = (req as AuthedRequest).userId as string | undefined;
+  if (userId) {
+    await upsertCurrentUser(userId);
+    const billing = await getBillingStatus(userId);
+    if (
+      billing.plan === "free" &&
+      billing.credits === 0 &&
+      billing.usage.voiceEdits >= billing.limits.voiceEdits
+    ) {
+      res.status(402).json(limitReachedResponse("voiceEdits"));
+      return;
+    }
   }
 
   const { command, lineItems, settings } = parsed.data;
@@ -182,8 +186,9 @@ Output this exact JSON structure:
 
   // Consume the voice-edit quota ONLY when the command was actually
   // understood and applied — schema-valid "understood: false" responses and
-  // the fallback above are free retries for the user.
-  if (validated.data.understood) {
+  // the fallback above are free retries for the user. Visitors are never
+  // metered.
+  if (userId && validated.data.understood) {
     try {
       await consumeAction(userId, "voiceEdits");
     } catch (err) {

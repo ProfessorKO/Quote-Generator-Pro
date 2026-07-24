@@ -1,0 +1,578 @@
+.
+├── artifacts
+│   ├── api-server
+│   │   ├── build.mjs
+│   │   ├── dist
+│   │   │   ├── index.mjs
+│   │   │   ├── index.mjs.map
+│   │   │   ├── pino-file.mjs
+│   │   │   ├── pino-file.mjs.map
+│   │   │   ├── pino-pretty.mjs
+│   │   │   ├── pino-pretty.mjs.map
+│   │   │   ├── pino-worker.mjs
+│   │   │   ├── pino-worker.mjs.map
+│   │   │   ├── thread-stream-worker.mjs
+│   │   │   └── thread-stream-worker.mjs.map
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── app.ts
+│   │   │   ├── index.ts
+│   │   │   ├── lib
+│   │   │   │   ├── auth.ts
+│   │   │   │   ├── billing.ts
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── resend.ts
+│   │   │   │   ├── stripeClient.ts
+│   │   │   │   ├── user-sync.ts
+│   │   │   │   └── webhookHandlers.ts
+│   │   │   ├── middlewares
+│   │   │   │   └── clerkProxyMiddleware.ts
+│   │   │   └── routes
+│   │   │       ├── admin.ts
+│   │   │       ├── apply-voice-command.ts
+│   │   │       ├── billing.ts
+│   │   │       ├── email-records.ts
+│   │   │       ├── email-templates.ts
+│   │   │       ├── health.ts
+│   │   │       ├── index.ts
+│   │   │       ├── parse-quote.ts
+│   │   │       ├── profile.ts
+│   │   │       ├── quotes.ts
+│   │   │       ├── send-quote-email.ts
+│   │   │       └── templates.ts
+│   │   └── tsconfig.json
+│   ├── mockup-sandbox
+│   │   ├── components.json
+│   │   ├── index.html
+│   │   ├── mockupPreviewPlugin.ts
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── App.tsx
+│   │   │   ├── components
+│   │   │   │   ├── mockups
+│   │   │   │   │   └── quotecraft
+│   │   │   │   │       ├── Dashboard.tsx
+│   │   │   │   │       ├── _group.css
+│   │   │   │   │       ├── PdfExport.tsx
+│   │   │   │   │       ├── QuoteScreen.tsx
+│   │   │   │   │       ├── Registration.tsx
+│   │   │   │   │       └── VoiceProcessing.tsx
+│   │   │   │   └── ui
+│   │   │   │       ├── accordion.tsx
+│   │   │   │       ├── alert-dialog.tsx
+│   │   │   │       ├── alert.tsx
+│   │   │   │       ├── aspect-ratio.tsx
+│   │   │   │       ├── avatar.tsx
+│   │   │   │       ├── badge.tsx
+│   │   │   │       ├── breadcrumb.tsx
+│   │   │   │       ├── button-group.tsx
+│   │   │   │       ├── button.tsx
+│   │   │   │       ├── calendar.tsx
+│   │   │   │       ├── card.tsx
+│   │   │   │       ├── carousel.tsx
+│   │   │   │       ├── chart.tsx
+│   │   │   │       ├── checkbox.tsx
+│   │   │   │       ├── collapsible.tsx
+│   │   │   │       ├── command.tsx
+│   │   │   │       ├── context-menu.tsx
+│   │   │   │       ├── dialog.tsx
+│   │   │   │       ├── drawer.tsx
+│   │   │   │       ├── dropdown-menu.tsx
+│   │   │   │       ├── empty.tsx
+│   │   │   │       ├── field.tsx
+│   │   │   │       ├── form.tsx
+│   │   │   │       ├── hover-card.tsx
+│   │   │   │       ├── input-group.tsx
+│   │   │   │       ├── input-otp.tsx
+│   │   │   │       ├── input.tsx
+│   │   │   │       ├── item.tsx
+│   │   │   │       ├── kbd.tsx
+│   │   │   │       ├── label.tsx
+│   │   │   │       ├── menubar.tsx
+│   │   │   │       ├── navigation-menu.tsx
+│   │   │   │       ├── pagination.tsx
+│   │   │   │       ├── popover.tsx
+│   │   │   │       ├── progress.tsx
+│   │   │   │       ├── radio-group.tsx
+│   │   │   │       ├── resizable.tsx
+│   │   │   │       ├── scroll-area.tsx
+│   │   │   │       ├── select.tsx
+│   │   │   │       ├── separator.tsx
+│   │   │   │       ├── sheet.tsx
+│   │   │   │       ├── sidebar.tsx
+│   │   │   │       ├── skeleton.tsx
+│   │   │   │       ├── slider.tsx
+│   │   │   │       ├── sonner.tsx
+│   │   │   │       ├── spinner.tsx
+│   │   │   │       ├── switch.tsx
+│   │   │   │       ├── table.tsx
+│   │   │   │       ├── tabs.tsx
+│   │   │   │       ├── textarea.tsx
+│   │   │   │       ├── toaster.tsx
+│   │   │   │       ├── toast.tsx
+│   │   │   │       ├── toggle-group.tsx
+│   │   │   │       ├── toggle.tsx
+│   │   │   │       └── tooltip.tsx
+│   │   │   ├── hooks
+│   │   │   │   ├── use-mobile.tsx
+│   │   │   │   └── use-toast.ts
+│   │   │   ├── index.css
+│   │   │   ├── lib
+│   │   │   │   └── utils.ts
+│   │   │   └── main.tsx
+│   │   ├── tsconfig.json
+│   │   └── vite.config.ts
+│   └── quotecraft
+│       ├── components.json
+│       ├── index.html
+│       ├── package.json
+│       ├── public
+│       │   ├── favicon.svg
+│       │   ├── logo.svg
+│       │   ├── opengraph.jpg
+│       │   └── robots.txt
+│       ├── src
+│       │   ├── App.tsx
+│       │   ├── components
+│       │   │   ├── billing
+│       │   │   │   ├── credit-packs.tsx
+│       │   │   │   ├── limit-dialog.tsx
+│       │   │   │   └── subscription-section.tsx
+│       │   │   ├── business-profile-form.tsx
+│       │   │   ├── email-quote-dialog.tsx
+│       │   │   ├── export-pdf-dialog.tsx
+│       │   │   ├── layout.tsx
+│       │   │   ├── mic-permission-dialog.tsx
+│       │   │   ├── mobile-input.tsx
+│       │   │   ├── numeric-input.tsx
+│       │   │   ├── quote-detail-dialog.tsx
+│       │   │   ├── template-edit-dialog.tsx
+│       │   │   ├── ui
+│       │   │   │   ├── accordion.tsx
+│       │   │   │   ├── alert-dialog.tsx
+│       │   │   │   ├── alert.tsx
+│       │   │   │   ├── aspect-ratio.tsx
+│       │   │   │   ├── avatar.tsx
+│       │   │   │   ├── badge.tsx
+│       │   │   │   ├── breadcrumb.tsx
+│       │   │   │   ├── button-group.tsx
+│       │   │   │   ├── button.tsx
+│       │   │   │   ├── calendar.tsx
+│       │   │   │   ├── card.tsx
+│       │   │   │   ├── carousel.tsx
+│       │   │   │   ├── chart.tsx
+│       │   │   │   ├── checkbox.tsx
+│       │   │   │   ├── collapsible.tsx
+│       │   │   │   ├── command.tsx
+│       │   │   │   ├── context-menu.tsx
+│       │   │   │   ├── dialog.tsx
+│       │   │   │   ├── drawer.tsx
+│       │   │   │   ├── dropdown-menu.tsx
+│       │   │   │   ├── empty.tsx
+│       │   │   │   ├── field.tsx
+│       │   │   │   ├── form.tsx
+│       │   │   │   ├── hover-card.tsx
+│       │   │   │   ├── input-group.tsx
+│       │   │   │   ├── input-otp.tsx
+│       │   │   │   ├── input.tsx
+│       │   │   │   ├── item.tsx
+│       │   │   │   ├── kbd.tsx
+│       │   │   │   ├── label.tsx
+│       │   │   │   ├── menubar.tsx
+│       │   │   │   ├── navigation-menu.tsx
+│       │   │   │   ├── pagination.tsx
+│       │   │   │   ├── popover.tsx
+│       │   │   │   ├── progress.tsx
+│       │   │   │   ├── radio-group.tsx
+│       │   │   │   ├── resizable.tsx
+│       │   │   │   ├── scroll-area.tsx
+│       │   │   │   ├── select.tsx
+│       │   │   │   ├── separator.tsx
+│       │   │   │   ├── sheet.tsx
+│       │   │   │   ├── sidebar.tsx
+│       │   │   │   ├── skeleton.tsx
+│       │   │   │   ├── slider.tsx
+│       │   │   │   ├── sonner.tsx
+│       │   │   │   ├── spinner.tsx
+│       │   │   │   ├── switch.tsx
+│       │   │   │   ├── table.tsx
+│       │   │   │   ├── tabs.tsx
+│       │   │   │   ├── textarea.tsx
+│       │   │   │   ├── toaster.tsx
+│       │   │   │   ├── toast.tsx
+│       │   │   │   ├── toggle-group.tsx
+│       │   │   │   ├── toggle.tsx
+│       │   │   │   └── tooltip.tsx
+│       │   │   └── voice-overlay.tsx
+│       │   ├── hooks
+│       │   │   ├── use-form-draft.ts
+│       │   │   ├── use-mobile.tsx
+│       │   │   ├── use-speech.ts
+│       │   │   └── use-toast.ts
+│       │   ├── index.css
+│       │   ├── lib
+│       │   │   ├── auth-actions.ts
+│       │   │   ├── billing.ts
+│       │   │   ├── email-template.ts
+│       │   │   ├── filename.ts
+│       │   │   ├── format.ts
+│       │   │   ├── mic-permission.ts
+│       │   │   ├── pdf.ts
+│       │   │   ├── queryClient.ts
+│       │   │   ├── quote-record.ts
+│       │   │   └── utils.ts
+│       │   ├── main.tsx
+│       │   └── pages
+│       │       ├── admin.tsx
+│       │       ├── complete-profile.tsx
+│       │       ├── dashboard.tsx
+│       │       ├── home.tsx
+│       │       ├── landing.tsx
+│       │       ├── not-found.tsx
+│       │       ├── settings.tsx
+│       │       └── templates.tsx
+│       ├── tsconfig.json
+│       └── vite.config.ts
+├── attached_assets
+│   ├── Pasted-Bug-14-Sign-in-shows-Coming-soon-banner-instead-of-Cler_1782910792285.txt
+│   ├── Pasted-Bug-1-Voice-cue-for-quote-revision-Fix-bug-Add-voice-co_1782604171755.txt
+│   ├── Pasted-Bug-29-Mobile-prefix-overflow-04-squeezed-to-second-lin_1783425198048.txt
+│   └── screenshots
+│       ├── 6cfadbef-ecbf-4600-9929-7b0975ffcd8f-00-3gm27wqml3s8d_worf_replit_dev_mockup_preview_quotecraft_QuoteScreen.png
+│       └── 6cfadbef-ecbf-4600-9929-7b0975ffcd8f-00-3gm27wqml3s8d_worf_replit_dev_mockup_preview_quotecraft_Registration.png
+├── docs
+│   ├── QuoteCraft-Iteration-3-Requirements.md
+│   ├── QuoteCraft-Iteration-4-Requirements.md
+│   ├── QuoteCraft-Requirements-v3.0.md
+│   └── QuoteCraft-Requirements-v4.0.md
+├── lib
+│   ├── api-client-react
+│   │   ├── dist
+│   │   │   ├── custom-fetch.d.ts
+│   │   │   ├── custom-fetch.d.ts.map
+│   │   │   ├── generated
+│   │   │   │   ├── api.d.ts
+│   │   │   │   ├── api.d.ts.map
+│   │   │   │   ├── api.schemas.d.ts
+│   │   │   │   └── api.schemas.d.ts.map
+│   │   │   ├── index.d.ts
+│   │   │   └── index.d.ts.map
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── custom-fetch.ts
+│   │   │   ├── generated
+│   │   │   │   ├── api.schemas.ts
+│   │   │   │   └── api.ts
+│   │   │   └── index.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.tsbuildinfo
+│   ├── api-spec
+│   │   ├── openapi.yaml
+│   │   ├── orval.config.ts
+│   │   └── package.json
+│   ├── api-zod
+│   │   ├── dist
+│   │   │   ├── generated
+│   │   │   │   ├── api.d.ts
+│   │   │   │   ├── api.d.ts.map
+│   │   │   │   └── types
+│   │   │   │       ├── adminUser.d.ts
+│   │   │   │       ├── adminUser.d.ts.map
+│   │   │   │       ├── apiError.d.ts
+│   │   │   │       ├── apiError.d.ts.map
+│   │   │   │       ├── billingCancelInput.d.ts
+│   │   │   │       ├── billingCancelInput.d.ts.map
+│   │   │   │       ├── billingCheckoutInput.d.ts
+│   │   │   │       ├── billingCheckoutInput.d.ts.map
+│   │   │   │       ├── billingCheckoutInputType.d.ts
+│   │   │   │       ├── billingCheckoutInputType.d.ts.map
+│   │   │   │       ├── billingCheckoutResult.d.ts
+│   │   │   │       ├── billingCheckoutResult.d.ts.map
+│   │   │   │       ├── billingConfirmInput.d.ts
+│   │   │   │       ├── billingConfirmInput.d.ts.map
+│   │   │   │       ├── billingConfirmResult.d.ts
+│   │   │   │       ├── billingConfirmResult.d.ts.map
+│   │   │   │       ├── billingConfirmResultResult.d.ts
+│   │   │   │       ├── billingConfirmResultResult.d.ts.map
+│   │   │   │       ├── billingStatus.d.ts
+│   │   │   │       ├── billingStatus.d.ts.map
+│   │   │   │       ├── billingStatusPlan.d.ts
+│   │   │   │       ├── billingStatusPlan.d.ts.map
+│   │   │   │       ├── businessProfile.d.ts
+│   │   │   │       ├── businessProfile.d.ts.map
+│   │   │   │       ├── businessProfileInput.d.ts
+│   │   │   │       ├── businessProfileInput.d.ts.map
+│   │   │   │       ├── cancelBillingSubscription200.d.ts
+│   │   │   │       ├── cancelBillingSubscription200.d.ts.map
+│   │   │   │       ├── consumePdfDownload200.d.ts
+│   │   │   │       ├── consumePdfDownload200.d.ts.map
+│   │   │   │       ├── consumePdfDownload200Source.d.ts
+│   │   │   │       ├── consumePdfDownload200Source.d.ts.map
+│   │   │   │       ├── creditPack.d.ts
+│   │   │   │       ├── creditPack.d.ts.map
+│   │   │   │       ├── emailRecord.d.ts
+│   │   │   │       ├── emailRecord.d.ts.map
+│   │   │   │       ├── emailTemplate.d.ts
+│   │   │   │       ├── emailTemplate.d.ts.map
+│   │   │   │       ├── emailTemplateInput.d.ts
+│   │   │   │       ├── emailTemplateInput.d.ts.map
+│   │   │   │       ├── freeLimits.d.ts
+│   │   │   │       ├── freeLimits.d.ts.map
+│   │   │   │       ├── healthStatus.d.ts
+│   │   │   │       ├── healthStatus.d.ts.map
+│   │   │   │       ├── index.d.ts
+│   │   │   │       ├── index.d.ts.map
+│   │   │   │       ├── limitReachedErrorCode.d.ts
+│   │   │   │       ├── limitReachedErrorCode.d.ts.map
+│   │   │   │       ├── limitReachedError.d.ts
+│   │   │   │       ├── limitReachedError.d.ts.map
+│   │   │   │       ├── listEmailRecordsParams.d.ts
+│   │   │   │       ├── listEmailRecordsParams.d.ts.map
+│   │   │   │       ├── listQuotesParams.d.ts
+│   │   │   │       ├── listQuotesParams.d.ts.map
+│   │   │   │       ├── nextQuoteSequence.d.ts
+│   │   │   │       ├── nextQuoteSequence.d.ts.map
+│   │   │   │       ├── openaiConversation.d.ts
+│   │   │   │       ├── openaiConversation.d.ts.map
+│   │   │   │       ├── openaiConversationInput.d.ts
+│   │   │   │       ├── openaiConversationInput.d.ts.map
+│   │   │   │       ├── openaiConversationWithMessages.d.ts
+│   │   │   │       ├── openaiConversationWithMessages.d.ts.map
+│   │   │   │       ├── openaiError.d.ts
+│   │   │   │       ├── openaiError.d.ts.map
+│   │   │   │       ├── openaiImageInput.d.ts
+│   │   │   │       ├── openaiImageInput.d.ts.map
+│   │   │   │       ├── openaiImageInputSize.d.ts
+│   │   │   │       ├── openaiImageInputSize.d.ts.map
+│   │   │   │       ├── openaiImageOutput.d.ts
+│   │   │   │       ├── openaiImageOutput.d.ts.map
+│   │   │   │       ├── openaiMessage.d.ts
+│   │   │   │       ├── openaiMessage.d.ts.map
+│   │   │   │       ├── openaiMessageInput.d.ts
+│   │   │   │       ├── openaiMessageInput.d.ts.map
+│   │   │   │       ├── parsedQuote.d.ts
+│   │   │   │       ├── parsedQuote.d.ts.map
+│   │   │   │       ├── parseQuoteInput.d.ts
+│   │   │   │       ├── parseQuoteInput.d.ts.map
+│   │   │   │       ├── quoteLineItem.d.ts
+│   │   │   │       ├── quoteLineItem.d.ts.map
+│   │   │   │       ├── quoteRecord.d.ts
+│   │   │   │       ├── quoteRecord.d.ts.map
+│   │   │   │       ├── quoteRecordInput.d.ts
+│   │   │   │       ├── quoteRecordInput.d.ts.map
+│   │   │   │       ├── quoteSettings.d.ts
+│   │   │   │       ├── quoteSettings.d.ts.map
+│   │   │   │       ├── quoteTemplate.d.ts
+│   │   │   │       ├── quoteTemplate.d.ts.map
+│   │   │   │       ├── quoteTemplateInput.d.ts
+│   │   │   │       ├── quoteTemplateInput.d.ts.map
+│   │   │   │       ├── sendQuoteEmailInput.d.ts
+│   │   │   │       ├── sendQuoteEmailInput.d.ts.map
+│   │   │   │       ├── usageSnapshot.d.ts
+│   │   │   │       ├── usageSnapshot.d.ts.map
+│   │   │   │       ├── voiceCommandInput.d.ts
+│   │   │   │       ├── voiceCommandInput.d.ts.map
+│   │   │   │       ├── voiceCommandResult.d.ts
+│   │   │   │       └── voiceCommandResult.d.ts.map
+│   │   │   ├── index.d.ts
+│   │   │   └── index.d.ts.map
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── generated
+│   │   │   │   ├── api.ts
+│   │   │   │   └── types
+│   │   │   │       ├── adminUser.ts
+│   │   │   │       ├── apiError.ts
+│   │   │   │       ├── billingCancelInput.ts
+│   │   │   │       ├── billingCheckoutInput.ts
+│   │   │   │       ├── billingCheckoutInputType.ts
+│   │   │   │       ├── billingCheckoutResult.ts
+│   │   │   │       ├── billingConfirmInput.ts
+│   │   │   │       ├── billingConfirmResultResult.ts
+│   │   │   │       ├── billingConfirmResult.ts
+│   │   │   │       ├── billingStatusPlan.ts
+│   │   │   │       ├── billingStatus.ts
+│   │   │   │       ├── businessProfileInput.ts
+│   │   │   │       ├── businessProfile.ts
+│   │   │   │       ├── cancelBillingSubscription200.ts
+│   │   │   │       ├── consumePdfDownload200Source.ts
+│   │   │   │       ├── consumePdfDownload200.ts
+│   │   │   │       ├── creditPack.ts
+│   │   │   │       ├── emailRecord.ts
+│   │   │   │       ├── emailTemplateInput.ts
+│   │   │   │       ├── emailTemplate.ts
+│   │   │   │       ├── freeLimits.ts
+│   │   │   │       ├── healthStatus.ts
+│   │   │   │       ├── index.ts
+│   │   │   │       ├── limitReachedErrorCode.ts
+│   │   │   │       ├── limitReachedError.ts
+│   │   │   │       ├── listEmailRecordsParams.ts
+│   │   │   │       ├── listQuotesParams.ts
+│   │   │   │       ├── nextQuoteSequence.ts
+│   │   │   │       ├── openaiConversationInput.ts
+│   │   │   │       ├── openaiConversation.ts
+│   │   │   │       ├── openaiConversationWithMessages.ts
+│   │   │   │       ├── openaiError.ts
+│   │   │   │       ├── openaiImageInputSize.ts
+│   │   │   │       ├── openaiImageInput.ts
+│   │   │   │       ├── openaiImageOutput.ts
+│   │   │   │       ├── openaiMessageInput.ts
+│   │   │   │       ├── openaiMessage.ts
+│   │   │   │       ├── parsedQuote.ts
+│   │   │   │       ├── parseQuoteInput.ts
+│   │   │   │       ├── quoteLineItem.ts
+│   │   │   │       ├── quoteRecordInput.ts
+│   │   │   │       ├── quoteRecord.ts
+│   │   │   │       ├── quoteSettings.ts
+│   │   │   │       ├── quoteTemplateInput.ts
+│   │   │   │       ├── quoteTemplate.ts
+│   │   │   │       ├── sendQuoteEmailInput.ts
+│   │   │   │       ├── usageSnapshot.ts
+│   │   │   │       ├── voiceCommandInput.ts
+│   │   │   │       └── voiceCommandResult.ts
+│   │   │   └── index.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.tsbuildinfo
+│   ├── db
+│   │   ├── dist
+│   │   │   ├── index.d.ts
+│   │   │   ├── index.d.ts.map
+│   │   │   └── schema
+│   │   │       ├── billing.d.ts
+│   │   │       ├── billing.d.ts.map
+│   │   │       ├── business-profiles.d.ts
+│   │   │       ├── business-profiles.d.ts.map
+│   │   │       ├── conversations.d.ts
+│   │   │       ├── conversations.d.ts.map
+│   │   │       ├── email-records.d.ts
+│   │   │       ├── email-records.d.ts.map
+│   │   │       ├── email-templates.d.ts
+│   │   │       ├── email-templates.d.ts.map
+│   │   │       ├── index.d.ts
+│   │   │       ├── index.d.ts.map
+│   │   │       ├── messages.d.ts
+│   │   │       ├── messages.d.ts.map
+│   │   │       ├── quotes.d.ts
+│   │   │       ├── quotes.d.ts.map
+│   │   │       ├── templates.d.ts
+│   │   │       ├── templates.d.ts.map
+│   │   │       ├── user-profiles.d.ts
+│   │   │       └── user-profiles.d.ts.map
+│   │   ├── drizzle.config.ts
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   │   └── schema
+│   │   │       ├── billing.ts
+│   │   │       ├── business-profiles.ts
+│   │   │       ├── conversations.ts
+│   │   │       ├── email-records.ts
+│   │   │       ├── email-templates.ts
+│   │   │       ├── index.ts
+│   │   │       ├── messages.ts
+│   │   │       ├── quotes.ts
+│   │   │       ├── templates.ts
+│   │   │       └── user-profiles.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.tsbuildinfo
+│   ├── integrations
+│   │   └── openai_ai_integrations
+│   │       └── src
+│   │           ├── client
+│   │           │   └── audio
+│   │           │       ├── audio-playback-worklet.js
+│   │           │       ├── audio-utils.ts
+│   │           │       ├── index.ts
+│   │           │       ├── useAudioPlayback.ts
+│   │           │       └── useVoiceRecorder.ts
+│   │           └── server
+│   │               ├── audio
+│   │               │   ├── client.ts
+│   │               │   └── index.ts
+│   │               ├── batch
+│   │               │   ├── index.ts
+│   │               │   └── utils.ts
+│   │               └── image
+│   │                   ├── client.ts
+│   │                   └── index.ts
+│   ├── integrations-openai-ai-react
+│   │   ├── dist
+│   │   │   ├── audio
+│   │   │   │   ├── audio-utils.d.ts
+│   │   │   │   ├── audio-utils.d.ts.map
+│   │   │   │   ├── index.d.ts
+│   │   │   │   ├── index.d.ts.map
+│   │   │   │   ├── useAudioPlayback.d.ts
+│   │   │   │   ├── useAudioPlayback.d.ts.map
+│   │   │   │   ├── useVoiceRecorder.d.ts
+│   │   │   │   ├── useVoiceRecorder.d.ts.map
+│   │   │   │   ├── useVoiceStream.d.ts
+│   │   │   │   └── useVoiceStream.d.ts.map
+│   │   │   ├── index.d.ts
+│   │   │   └── index.d.ts.map
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── audio
+│   │   │   │   ├── audio-playback-worklet.js
+│   │   │   │   ├── audio-utils.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── useAudioPlayback.ts
+│   │   │   │   ├── useVoiceRecorder.ts
+│   │   │   │   └── useVoiceStream.ts
+│   │   │   └── index.ts
+│   │   ├── tsconfig.json
+│   │   └── tsconfig.tsbuildinfo
+│   └── integrations-openai-ai-server
+│       ├── dist
+│       │   ├── audio
+│       │   │   ├── client.d.ts
+│       │   │   ├── client.d.ts.map
+│       │   │   ├── index.d.ts
+│       │   │   └── index.d.ts.map
+│       │   ├── batch
+│       │   │   ├── index.d.ts
+│       │   │   ├── index.d.ts.map
+│       │   │   ├── utils.d.ts
+│       │   │   └── utils.d.ts.map
+│       │   ├── client.d.ts
+│       │   ├── client.d.ts.map
+│       │   ├── image
+│       │   │   ├── client.d.ts
+│       │   │   ├── client.d.ts.map
+│       │   │   ├── index.d.ts
+│       │   │   └── index.d.ts.map
+│       │   ├── index.d.ts
+│       │   └── index.d.ts.map
+│       ├── package.json
+│       ├── src
+│       │   ├── audio
+│       │   │   ├── client.ts
+│       │   │   └── index.ts
+│       │   ├── batch
+│       │   │   ├── index.ts
+│       │   │   └── utils.ts
+│       │   ├── client.ts
+│       │   ├── image
+│       │   │   ├── client.ts
+│       │   │   └── index.ts
+│       │   └── index.ts
+│       ├── tsconfig.json
+│       └── tsconfig.tsbuildinfo
+├── package.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── replit.md
+├── scripts
+│   ├── package.json
+│   ├── post-merge.sh
+│   ├── src
+│   │   ├── hello.ts
+│   │   ├── seed-stripe-products.ts
+│   │   └── stripeClient.ts
+│   ├── tsconfig.json
+│   └── tsconfig.tsbuildinfo
+├── structure.txt
+├── tsconfig.base.json
+└── tsconfig.json
+
+72 directories, 504 files

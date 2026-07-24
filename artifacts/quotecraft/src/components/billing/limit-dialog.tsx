@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, Crown, Coins } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Crown, Coins, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -34,8 +34,18 @@ const COPY: Record<LimitAction, { title: string; body: string }> = {
   },
   templates: {
     title: "You've used all 5 free template slots",
-    body: "The free plan includes 5 saved templates. Go Pro for unlimited templates, or buy credits — 1 credit saves 1 extra template. Your existing templates always stay editable.",
+    body: "The free plan includes 5 saved template slots — this is a fixed limit, not a monthly allowance. Go Pro for unlimited templates, or buy credits — 1 credit saves 1 extra template.",
   },
+};
+
+// Templates are a hard slot limit (5 at any time) and never reset; the other
+// metered actions are monthly allowances that reset on the 1st (Sydney time).
+const FOOTNOTE: Record<LimitAction, string> = {
+  newQuotes: "Free limits reset on the 1st of each month.",
+  voiceEdits: "Free limits reset on the 1st of each month.",
+  emailsSent: "Free limits reset on the 1st of each month.",
+  pdfDownloads: "Free limits reset on the 1st of each month.",
+  templates: "Existing templates always stay editable.",
 };
 
 interface LimitDialogProps {
@@ -45,13 +55,21 @@ interface LimitDialogProps {
 
 /**
  * CP1–CP5 — shown when the server answers 402 LIMIT_REACHED. Offers the Pro
- * subscription and credit packs; free limits reset on the 1st of each month
- * (Sydney time).
+ * subscription and credit packs. Monthly-metered actions (quotes, voice
+ * edits, emails, downloads) reset on the 1st of each month (Sydney time);
+ * the template slot limit is a hard cap and never resets.
  */
 export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
   const checkout = useCreateBillingCheckout();
   const { data: billing } = useBilling();
   const [showPacks, setShowPacks] = useState(false);
+
+  // Every (re)open must start on the initial view (Go Pro + Buy credits),
+  // regardless of how the dialog was last dismissed — closing via the
+  // "Maybe later" button bypasses the Dialog onOpenChange reset below.
+  useEffect(() => {
+    if (action !== null) setShowPacks(false);
+  }, [action]);
 
   const copy = action ? COPY[action] : null;
 
@@ -82,18 +100,29 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
         onOpenChange(o);
       }}
     >
-      <DialogContent className="sm:max-w-md w-[92vw] rounded-xl">
+      <DialogContent className="sm:max-w-md w-[92vw] max-w-[92vw] overflow-hidden rounded-xl">
         <DialogHeader>
-          <DialogTitle>{copy?.title}</DialogTitle>
-          <DialogDescription>{copy?.body}</DialogDescription>
+          <DialogTitle className="break-words pr-6">{copy?.title}</DialogTitle>
+          <DialogDescription className="break-words">
+            {copy?.body}
+          </DialogDescription>
         </DialogHeader>
 
         {showPacks ? (
-          <CreditPacks />
+          <div className="space-y-2">
+            <button
+              onClick={() => setShowPacks(false)}
+              className="flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </button>
+            <CreditPacks />
+          </div>
         ) : (
           <div className="space-y-2 py-1">
             <Button
-              className="w-full h-11 font-semibold"
+              className="w-full h-auto min-h-11 whitespace-normal text-center font-semibold"
               onClick={subscribe}
               disabled={checkout.isPending}
             >
@@ -102,15 +131,15 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
               ) : (
                 <Crown className="w-4 h-4" />
               )}
-              Go Pro — $4.99/month, unlimited everything
+              <span className="min-w-0">Go Pro — $4.99/month, unlimited everything</span>
             </Button>
             <Button
               variant="outline"
-              className="w-full h-11"
+              className="w-full h-auto min-h-11 whitespace-normal text-center"
               onClick={() => setShowPacks(true)}
             >
               <Coins className="w-4 h-4" />
-              Buy credits from $2
+              <span className="min-w-0">Buy credits from $2</span>
             </Button>
             {typeof billing?.credits === "number" && billing.credits > 0 && (
               <p className="text-xs text-center text-muted-foreground">
@@ -125,14 +154,19 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
           <Button
             variant="ghost"
             className="w-full sm:w-auto"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              setShowPacks(false);
+              onOpenChange(false);
+            }}
           >
             Maybe later
           </Button>
         </DialogFooter>
-        <p className="text-[11px] text-center text-muted-foreground">
-          Free limits reset on the 1st of each month.
-        </p>
+        {action && (
+          <p className="text-[11px] text-center text-muted-foreground break-words">
+            {FOOTNOTE[action]}
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );

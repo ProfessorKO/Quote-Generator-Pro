@@ -11,11 +11,19 @@ import { getUncachableStripeClient } from "../lib/stripeClient";
 import {
   getBillingStatus,
   getSubscriptionInfo,
+  setProfileSubscriptionState,
   consumeAction,
   LimitReachedError,
   limitReachedResponse,
 } from "../lib/billing";
+
 import { upsertCurrentUser } from "../lib/user-sync";
+
+// NOTE (#44): the stripe.* mirror tables are read-only for the app role
+// (`cancel_at_period_end` can only be updated to DEFAULT), so we cannot patch
+// the mirror after a cancel/undo. Instead, those routes write the profile's
+// plan/subscription_status synchronously and getSubscriptionInfo trusts the
+// fresher of {profile, mirror} while the sync catches up.
 
 const router: IRouter = Router();
 
@@ -128,6 +136,7 @@ router.post("/billing/checkout", requireAuth, async (req, res): Promise<void> =>
       await stripe.subscriptions.update(sub.subscriptionId, {
         cancel_at_period_end: false,
       });
+      await setProfileSubscriptionState(userId, "paid", "active");
       res.json({ resumed: true });
       return;
     }
@@ -207,7 +216,13 @@ router.post("/billing/confirm", requireAuth, async (req, res): Promise<void> => 
     }
     await db
       .update(userProfilesTable)
-      .set({ stripeSubscriptionId: subscriptionId, updatedAt: new Date() })
+      .set({
+        stripeSubscriptionId: subscriptionId,
+        plan: "paid",
+        subscriptionStatus: "active",
+        subscriptionStateUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(userProfilesTable.userId, userId));
     res.json({ result: "subscription_active" });
     return;
@@ -274,6 +289,8 @@ router.post("/billing/cancel", requireAuth, async (req, res): Promise<void> => {
       ? { metadata: { cancel_reason: reason.slice(0, 200) } }
       : {}),
   });
+  // Still "paid" until the period ends, but the subscription is cancelled.
+  await setProfileSubscriptionState(userId, "paid", "cancelled");
 
   res.json({
     result: "cancelled_at_period_end",
