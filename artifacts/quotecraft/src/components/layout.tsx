@@ -44,8 +44,10 @@ export function Layout({ children, title, backTo }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background flex justify-center">
-      <div className="w-full max-w-[430px] bg-background shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-border">
+    // #50 — fixed viewport height so <main> scrolls internally and the
+    // header + bottom nav stay pinned while scrolling.
+    <div className="h-[100dvh] w-full bg-background flex justify-center">
+      <div className="w-full max-w-[430px] h-full bg-background shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-border">
         {/* Header */}
         <header className="h-16 border-b border-border flex items-center justify-between px-4 bg-primary text-primary-foreground shrink-0 z-10">
           <div className="flex items-center gap-3 min-w-0">

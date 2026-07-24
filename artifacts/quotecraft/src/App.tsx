@@ -20,7 +20,7 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
@@ -117,9 +117,27 @@ function PageFallback() {
   );
 }
 
+// #49 — every way of reaching sign-in/sign-up must offer a way back out.
+// Rendered on the auth pages themselves (not by the trigger), so it shows
+// regardless of whether the user arrived via a button, the Templates tab
+// redirect, or a direct link. Always exits to the public quote builder.
+function AuthCloseButton() {
+  const [, setLocation] = useLocation();
+  return (
+    <button
+      onClick={() => setLocation("/quote")}
+      aria-label="Close sign-in"
+      className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white text-[#626D84] shadow-md ring-1 ring-[#D1D6E0] hover:text-[#13203A] hover:bg-[#F4F6F9] transition-colors"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  );
+}
+
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+      <AuthCloseButton />
       <SignIn
         routing="path"
         path={`${basePath}/sign-in`}
@@ -132,7 +150,8 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+      <AuthCloseButton />
       <SignUp
         routing="path"
         path={`${basePath}/sign-up`}

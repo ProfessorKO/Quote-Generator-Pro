@@ -34,6 +34,14 @@ export const userProfilesTable = pgTable("user_profiles", {
   plan: text("plan").notNull().default("free"),
   // subscriptionStatus: "never" (no subscription yet) | "active" | "cancelled"
   subscriptionStatus: text("subscription_status").notNull().default("never"),
+  // When plan/subscription_status last changed (#44). Written ONLY by
+  // subscription-state writers (setProfileSubscriptionState, checkout
+  // confirm) — never by unrelated profile updates — so it can be compared
+  // against the read-only stripe.* mirror's _updated_at to decide which
+  // record is fresher while the async Stripe sync catches up.
+  subscriptionStateUpdatedAt: timestamp("subscription_state_updated_at", {
+    withTimezone: true,
+  }),
   // Pay-as-you-go credit balance. 1 credit = 1 action (new quote, voice
   // edit, email, or PDF download). Credits never expire and are consumed
   // before free-tier limits are applied.

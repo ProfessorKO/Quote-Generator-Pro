@@ -62,6 +62,7 @@ export async function getSubscriptionInfo(
       subscriptionId: userProfilesTable.stripeSubscriptionId,
       plan: userProfilesTable.plan,
       subscriptionStatus: userProfilesTable.subscriptionStatus,
+      subscriptionStateUpdatedAt: userProfilesTable.subscriptionStateUpdatedAt,
     })
     .from(userProfilesTable)
     .where(eq(userProfilesTable.userId, userId));
@@ -83,6 +84,7 @@ export async function getSubscriptionInfo(
   const result = await db.execute(sql`
     SELECT s.status,
            s.cancel_at_period_end,
+           s._updated_at,
            to_char(
              to_timestamp((i.value ->> 'current_period_end')::bigint) AT TIME ZONE 'UTC',
              'YYYY-MM-DD"T"HH24:MI:SS"Z"'
@@ -96,6 +98,7 @@ export async function getSubscriptionInfo(
     | {
         status: string;
         cancel_at_period_end: boolean | null;
+        _updated_at: string | Date | null;
         current_period_end: string | null;
       }
     | undefined;
@@ -118,7 +121,31 @@ export async function getSubscriptionInfo(
   }
 
   const active = row.status === "active" || row.status === "trialing";
-  const cancelAtPeriodEnd = active ? Boolean(row.cancel_at_period_end) : false;
+  let cancelAtPeriodEnd = active ? Boolean(row.cancel_at_period_end) : false;
+
+  // #44 — the stripe.* mirror is read-only for us and syncs asynchronously,
+  // so right after a cancel / undo-cancel it can still hold the OLD flag.
+  // The profile columns are written synchronously by those routes, stamping
+  // subscription_state_updated_at (written ONLY on subscription-state
+  // changes, never by unrelated profile writes). When the subscription is
+  // active and the two disagree, trust whichever record was updated more
+  // recently — so the UI refetch right after a mutation sees the new state,
+  // while an external change (e.g. Stripe dashboard) still wins once the
+  // mirror syncs with a newer _updated_at.
+  if (active && profile && profile.subscriptionStatus !== "never") {
+    const profileCancel = profile.subscriptionStatus === "cancelled";
+    if (profileCancel !== cancelAtPeriodEnd) {
+      const mirrorUpdatedAt = row._updated_at
+        ? new Date(row._updated_at).getTime()
+        : 0;
+      const profileUpdatedAt = profile.subscriptionStateUpdatedAt
+        ? new Date(profile.subscriptionStateUpdatedAt).getTime()
+        : 0;
+      if (profileUpdatedAt > mirrorUpdatedAt) {
+        cancelAtPeriodEnd = profileCancel;
+      }
+    }
+  }
 
   // Reconcile the denormalised user_profiles columns (#43) — only when the
   // mirror has an authoritative row with a terminal/non-active status.
@@ -158,9 +185,15 @@ export async function setProfileSubscriptionState(
   plan: ProfilePlan,
   subscriptionStatus: ProfileSubscriptionStatus,
 ): Promise<void> {
+  const now = new Date();
   await db
     .update(userProfilesTable)
-    .set({ plan, subscriptionStatus, updatedAt: new Date() })
+    .set({
+      plan,
+      subscriptionStatus,
+      subscriptionStateUpdatedAt: now,
+      updatedAt: now,
+    })
     .where(eq(userProfilesTable.userId, userId));
 }
 
