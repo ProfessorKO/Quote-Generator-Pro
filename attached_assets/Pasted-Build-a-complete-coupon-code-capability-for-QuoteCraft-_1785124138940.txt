@@ -1,0 +1,208 @@
+Build a complete coupon code capability for QuoteCraft (Work Mates Pro — Quote Mate) that allows me to create seasonal or promotional coupon codes for selected users to access the Pro plan for free.
+
+---
+
+📋 Core Requirements
+
+1. Coupon Features
+
+· Create unique coupon codes (e.g., ProTrial202607)
+· Users can enter coupon at checkout
+· Coupon grants free Pro access for a set period (e.g., 30 days)
+· Coupon can be:
+  · Public (anyone can use)
+  · User-specific (only selected users)
+  · Limited use (max X redemptions)
+  · Time-limited (expires on date)
+· Track coupon usage (who used it, when)
+
+2. Coupon Types
+
+· free_trial → Free Pro access for X days
+· percentage → X% off subscription
+· fixed → $X off subscription
+
+---
+
+📊 Database Schema
+
+Table: coupons
+
+```sql
+CREATE TABLE coupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  description TEXT,
+  discount_type TEXT NOT NULL,  -- 'free_trial' | 'percentage' | 'fixed'
+  discount_value DECIMAL(10,2),
+  free_trial_days INTEGER,
+  max_uses INTEGER,             -- NULL = unlimited
+  used_count INTEGER DEFAULT 0,
+  user_id UUID REFERENCES user_profiles(user_id), -- NULL = public
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  created_by UUID,              -- Admin user who created it
+  is_active BOOLEAN DEFAULT TRUE
+);
+```
+
+Table: coupon_redemptions
+
+```sql
+CREATE TABLE coupon_redemptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  coupon_id UUID REFERENCES coupons(id),
+  user_id UUID REFERENCES user_profiles(user_id),
+  redeemed_at TIMESTAMP DEFAULT NOW(),
+  subscription_id TEXT          -- Stripe subscription ID if applicable
+);
+```
+
+---
+
+🔧 Backend Implementation
+
+1. Coupon Validation Logic
+
+· Check if coupon exists
+· Check if active
+· Check if expired
+· Check max uses
+· Check if user-specific (and matches current user)
+· Return validation result with error messages
+
+2. Apply Coupon at Checkout
+
+· Validate coupon
+· If free_trial: Grant Pro access immediately for X days, update plan='pro', subscriptionStatus='active', set trialEndsAt
+· If percentage/fixed: Apply discount to Stripe checkout session
+· Record redemption in coupon_redemptions
+· Increment used_count
+
+3. Stripe Integration (optional)
+
+· If using Stripe, create a promo code in Stripe when coupon is created
+· Sync usage between Stripe and database
+
+---
+
+👑 Admin Portal
+
+Admin users need a dedicated portal to manage coupons:
+
+· Secure login (only admins can access)
+· Create coupon form (code, description, type, value, trial days, max uses, user-specific, expiry)
+· List all coupons with status (active/expired/used)
+· Edit coupon (toggle active, extend expiry)
+· Delete coupon
+· View redemption history (who used it, when)
+· Search/filter coupons (by code, date, status)
+
+Admin Authentication:
+
+· Use existing Clerk authentication
+· Add isAdmin: boolean to user profiles
+· Protect admin routes with requireAdmin middleware
+· Only users with isAdmin = true can access admin portal
+
+---
+
+🖥️ Frontend Implementation
+
+1. Coupon Input on Checkout Page
+
+· Input field: "Enter coupon code"
+· "Apply" button (validates coupon before checkout)
+· Show validation result (success or error message)
+· If valid, display discount/free trial details
+· Update checkout summary to reflect discount
+
+2. Admin Portal UI
+
+· Dashboard with coupon stats (total coupons, active, redeemed)
+· "Create Coupon" button → opens form
+· Coupon list table with: Code, Description, Type, Uses, Status, Expiry, Actions (Edit, Delete)
+· Redemption history modal per coupon
+
+---
+
+🧪 Testing
+
+Test Scenarios:
+
+1. Public coupon → any user can use
+2. User-specific coupon → only specified user can use
+3. Expired coupon → shows "Coupon expired"
+4. Max uses reached → shows "Coupon limit reached"
+5. Free trial coupon → grants Pro access for X days
+6. Percentage discount → applies correct discount
+7. Fixed discount → applies correct discount
+8. Already redeemed → prevents double use
+
+---
+
+📋 Manual Database Option (Fallback)
+
+Option A: Manual SQL Insert
+
+· Create coupon directly via SQL for quick testing or one-off campaigns:
+
+```sql
+INSERT INTO coupons (code, description, discount_type, free_trial_days, max_uses, expires_at)
+VALUES ('ProTrial202607', 'July 2026 Pro Trial', 'free_trial', 30, 50, '2026-08-01 23:59:59');
+```
+
+· View/update via SQL or admin portal
+
+Option B: Admin API (Recommended)
+
+· Admin API endpoints:
+  · POST /api/admin/coupons → Create coupon
+  · GET /api/admin/coupons → List coupons
+  · PUT /api/admin/coupons/:id → Update coupon
+  · DELETE /api/admin/coupons/:id → Delete coupon
+  · GET /api/admin/coupons/:id/redemptions → View redemption history
+
+---
+
+📋 File Structure
+
+```
+📁 api-server/src/
+├── 📁 routes/
+│   ├── admin.ts              ← Admin routes (coupons)
+│   └── billing.ts            ← Checkout + coupon validation
+├── 📁 lib/
+│   └── coupons.ts            ← Coupon validation logic
+└── 📁 db/
+    └── schema/
+        ├── coupons.ts        ← Coupons table schema
+        └── coupon-redemptions.ts ← Redemptions table schema
+
+📁 quotecraft/src/
+├── 📁 components/
+│   └── billing/
+│       ├── coupon-input.tsx     ← Coupon input on checkout
+│       └── admin/
+│           ├── coupon-list.tsx  ← Admin coupon list
+│           └── coupon-form.tsx  ← Admin create/edit coupon
+├── 📁 pages/
+│   └── admin.tsx            ← Admin portal page
+└── 📁 hooks/
+    └── useCoupons.ts        ← React Query hooks for coupons
+```
+
+---
+
+✅ Acceptance Criteria
+
+1. Admin can create coupons via admin portal ✅
+2. Admin can list, edit, and delete coupons ✅
+3. Admin can view redemption history ✅
+4. User can enter coupon code at checkout ✅
+5. Coupon validation works (expiry, max uses, user-specific) ✅
+6. Free trial coupon grants Pro access for correct days ✅
+7. Percentage/fixed discount applies correctly ✅
+8. Coupon usage is tracked ✅
+9. Admin portal is secure (only admins can access) ✅
+10. Manual SQL insert option works as fallback ✅"
