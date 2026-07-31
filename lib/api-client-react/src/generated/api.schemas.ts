@@ -36,8 +36,20 @@ export const BillingStatusPlan = {
   free: 'free',
 } as const;
 
+export type BillingStatusPlanSource = typeof BillingStatusPlanSource[keyof typeof BillingStatusPlanSource];
+
+
+export const BillingStatusPlanSource = {
+  subscription: 'subscription',
+  trial: 'trial',
+  none: 'none',
+} as const;
+
 export interface BillingStatus {
   plan: BillingStatusPlan;
+  planSource: BillingStatusPlanSource;
+  /** @nullable */
+  trialEndsAt?: string | null;
   cancelAtPeriodEnd: boolean;
   /** @nullable */
   currentPeriodEnd?: string | null;
@@ -101,6 +113,70 @@ export interface LimitReachedError {
   error: string;
   code: LimitReachedErrorCode;
   action: string;
+}
+
+export interface CouponRedeemInput {
+  code: string;
+}
+
+export type CouponRedeemErrorCode = typeof CouponRedeemErrorCode[keyof typeof CouponRedeemErrorCode];
+
+
+export const CouponRedeemErrorCode = {
+  INVALID_CODE: 'INVALID_CODE',
+  EXPIRED: 'EXPIRED',
+  MAX_USES_REACHED: 'MAX_USES_REACHED',
+  ALREADY_REDEEMED: 'ALREADY_REDEEMED',
+  ALREADY_PRO: 'ALREADY_PRO',
+} as const;
+
+export interface CouponRedeemError {
+  error: string;
+  code: CouponRedeemErrorCode;
+}
+
+export interface AdminCouponInput {
+  code: string;
+  /** @nullable */
+  description?: string | null;
+  /** @minimum 1 */
+  freeTrialDays: number;
+  /**
+     * Null = unlimited redemptions
+     * @nullable
+     */
+  maxUses?: number | null;
+  /**
+     * Clerk user id for a user-specific coupon; null = public
+     * @nullable
+     */
+  userId?: string | null;
+  /**
+     * ISO timestamp; null = never expires
+     * @nullable
+     */
+  expiresAt?: string | null;
+  isActive?: boolean;
+}
+
+export interface AdminCoupon {
+  id: string;
+  code: string;
+  /** @nullable */
+  description?: string | null;
+  discountType: string;
+  freeTrialDays: number;
+  /** @nullable */
+  maxUses?: number | null;
+  usedCount: number;
+  /** @nullable */
+  userId?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+  isActive: boolean;
+  /** @nullable */
+  createdBy?: string | null;
+  createdAt: string;
 }
 
 export interface HealthStatus {
@@ -359,6 +435,19 @@ export interface OpenaiImageOutput {
 export interface OpenaiError {
   error: string;
 }
+
+export type RedeemCoupon200Result = typeof RedeemCoupon200Result[keyof typeof RedeemCoupon200Result];
+
+
+export const RedeemCoupon200Result = {
+  trial_started: 'trial_started',
+} as const;
+
+export type RedeemCoupon200 = {
+  result: RedeemCoupon200Result;
+  trialDays: number;
+  trialEndsAt: string;
+};
 
 export type ListQuotesParams = {
 clientName?: string;

@@ -44,15 +44,26 @@ export function currentPeriod(): string {
 
 export interface SubscriptionInfo {
   plan: "pro" | "free";
+  // Where Pro access comes from: a paid Stripe subscription or a
+  // coupon-granted free trial. "none" when the plan is free.
+  source: "subscription" | "trial" | "none";
   subscriptionId: string | null;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: string | null;
+  // Set while a coupon trial is unexpired (even if a paid subscription
+  // supersedes it as the plan source).
+  trialEndsAt: string | null;
 }
 
 /**
- * Derives the user's plan from the synced stripe.subscriptions mirror.
+ * Derives the user's plan from the synced stripe.subscriptions mirror,
+ * falling back to a coupon-granted trial (user_profiles.trial_ends_at).
  * "pro" while the subscription is active or trialing — including after a
- * cancellation, until the end of the paid period.
+ * cancellation, until the end of the paid period. A paid subscription always
+ * supersedes a coupon trial; the trial only fills in when Stripe-derived
+ * state says free, so the mirror-freshness logic (#44) is untouched and a
+ * trial user who subscribes mid-trial simply switches source. Trial expiry
+ * needs no cron or write — derivation stops treating the user as Pro.
  */
 export async function getSubscriptionInfo(
   userId: string,
@@ -63,22 +74,45 @@ export async function getSubscriptionInfo(
       plan: userProfilesTable.plan,
       subscriptionStatus: userProfilesTable.subscriptionStatus,
       subscriptionStateUpdatedAt: userProfilesTable.subscriptionStateUpdatedAt,
+      trialEndsAt: userProfilesTable.trialEndsAt,
     })
     .from(userProfilesTable)
     .where(eq(userProfilesTable.userId, userId));
+
+  const trialActive = Boolean(
+    profile?.trialEndsAt && profile.trialEndsAt.getTime() > Date.now(),
+  );
+  const trialEndsAtIso = profile?.trialEndsAt
+    ? profile.trialEndsAt.toISOString()
+    : null;
+  /** Free-or-trial result used whenever no paid subscription applies. */
+  const nonPaid = (subscriptionId: string | null): SubscriptionInfo =>
+    trialActive
+      ? {
+          plan: "pro",
+          source: "trial",
+          subscriptionId,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: trialEndsAtIso,
+          trialEndsAt: trialEndsAtIso,
+        }
+      : {
+          plan: "free",
+          source: "none",
+          subscriptionId,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null,
+          trialEndsAt: trialEndsAtIso,
+        };
 
   const subscriptionId = profile?.subscriptionId ?? null;
   if (!subscriptionId) {
     if (profile && profile.plan !== "free") {
       // Defensive: no subscription reference — profile must say free.
+      // (Coupon trials never write `plan`, so this stays Stripe-only.)
       await setProfileSubscriptionState(userId, "free", profile.subscriptionStatus === "never" ? "never" : "cancelled");
     }
-    return {
-      plan: "free",
-      subscriptionId: null,
-      cancelAtPeriodEnd: false,
-      currentPeriodEnd: null,
-    };
+    return nonPaid(null);
   }
 
   const result = await db.execute(sql`
@@ -110,13 +144,14 @@ export async function getSubscriptionInfo(
   // missing row.
   if (!row) {
     const trustedPro = profile?.plan === "paid";
+    if (!trustedPro) return nonPaid(subscriptionId);
     return {
-      plan: trustedPro ? "pro" : "free",
+      plan: "pro",
+      source: "subscription",
       subscriptionId,
-      cancelAtPeriodEnd: trustedPro
-        ? profile?.subscriptionStatus === "cancelled"
-        : false,
+      cancelAtPeriodEnd: profile?.subscriptionStatus === "cancelled",
       currentPeriodEnd: null,
+      trialEndsAt: trialEndsAtIso,
     };
   }
 
@@ -160,11 +195,14 @@ export async function getSubscriptionInfo(
     await setProfileSubscriptionState(userId, expectedPlan, expectedStatus);
   }
 
+  if (!active) return nonPaid(subscriptionId);
   return {
-    plan: active ? "pro" : "free",
+    plan: "pro",
+    source: "subscription",
     subscriptionId,
     cancelAtPeriodEnd,
-    currentPeriodEnd: active ? (row?.current_period_end ?? null) : null,
+    currentPeriodEnd: row?.current_period_end ?? null,
+    trialEndsAt: trialEndsAtIso,
   };
 }
 
@@ -375,6 +413,8 @@ const COLUMN_BY_ACTION: Record<MeteredAction, string> = {
 
 export interface BillingStatus {
   plan: "pro" | "free";
+  planSource: "subscription" | "trial" | "none";
+  trialEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: string | null;
   credits: number;
@@ -412,6 +452,8 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 
   return {
     plan: sub.plan,
+    planSource: sub.source,
+    trialEndsAt: sub.trialEndsAt,
     cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
     currentPeriodEnd: sub.currentPeriodEnd,
     credits: profile?.credits ?? 0,

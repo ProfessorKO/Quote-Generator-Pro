@@ -18,6 +18,7 @@ import {
 } from "../lib/billing";
 
 import { upsertCurrentUser } from "../lib/user-sync";
+import { redeemCoupon, CouponError } from "../lib/coupons";
 
 // NOTE (#44): the stripe.* mirror tables are read-only for the app role
 // (`cancel_at_period_end` can only be updated to DEFAULT), so we cannot patch
@@ -140,10 +141,13 @@ router.post("/billing/checkout", requireAuth, async (req, res): Promise<void> =>
       res.json({ resumed: true });
       return;
     }
-    if (sub.plan === "pro") {
+    if (sub.plan === "pro" && sub.source === "subscription") {
       res.status(409).json({ error: "Already subscribed to Pro" });
       return;
     }
+    // A coupon-trial user may subscribe mid-trial: once the paid
+    // subscription is active it supersedes the trial (subscription source
+    // wins in getSubscriptionInfo), so checkout proceeds normally.
   }
 
   const catalog = await getCatalog();
@@ -297,6 +301,39 @@ router.post("/billing/cancel", requireAuth, async (req, res): Promise<void> => {
     currentPeriodEnd: sub.currentPeriodEnd,
   });
 });
+
+// Redeem a promotional coupon code (free_trial type): grants Pro for the
+// coupon's trial period without Stripe. Validation and error contract live
+// in lib/coupons.ts.
+router.post(
+  "/billing/coupons/redeem",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const userId = (req as AuthedRequest).userId;
+    await upsertCurrentUser(userId);
+    const { code } = req.body as { code?: string };
+    if (!code || typeof code !== "string") {
+      res
+        .status(400)
+        .json({ error: "Enter a coupon code.", code: "INVALID_CODE" });
+      return;
+    }
+    try {
+      const result = await redeemCoupon(userId, code);
+      res.json({
+        result: "trial_started",
+        trialDays: result.trialDays,
+        trialEndsAt: result.trialEndsAt.toISOString(),
+      });
+    } catch (err) {
+      if (err instanceof CouponError) {
+        res.status(400).json({ error: err.message, code: err.code });
+        return;
+      }
+      throw err;
+    }
+  },
+);
 
 // PDF generation happens client-side, so the client asks for authorization
 // (and consumes quota/credit) right before generating the file.

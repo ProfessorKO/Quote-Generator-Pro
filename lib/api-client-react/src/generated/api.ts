@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminCoupon,
+  AdminCouponInput,
   AdminUser,
   ApiError,
   BillingCancelInput,
@@ -32,6 +34,8 @@ import type {
   BusinessProfileInput,
   CancelBillingSubscription200,
   ConsumePdfDownload200,
+  CouponRedeemError,
+  CouponRedeemInput,
   EmailRecord,
   EmailTemplate,
   EmailTemplateInput,
@@ -54,6 +58,7 @@ import type {
   QuoteRecordInput,
   QuoteTemplate,
   QuoteTemplateInput,
+  RedeemCoupon200,
   SendQuoteEmailInput,
   VoiceCommandInput,
   VoiceCommandResult
@@ -884,6 +889,227 @@ export function useListAdminUsers<TData = Awaited<ReturnType<typeof listAdminUse
 
 
 
+
+export const getCreateAdminCouponUrl = () => {
+
+
+
+
+  return `/api/admin/coupons`
+}
+
+/**
+ * Creates a free_trial coupon. Requires the signed-in user's email to be listed in ADMIN_EMAILS. This replaces direct SQL inserts, which only work in development (production DB access is read-only).
+
+ * @summary Create a promotional coupon code (admin only)
+ */
+export const createAdminCoupon = async (adminCouponInput: AdminCouponInput, options?: RequestInit): Promise<AdminCoupon> => {
+
+  return customFetch<AdminCoupon>(getCreateAdminCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      adminCouponInput,)
+  }
+);}
+
+
+
+
+export const getCreateAdminCouponMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,{data: BodyType<AdminCouponInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,{data: BodyType<AdminCouponInput>}, TContext> => {
+
+const mutationKey = ['createAdminCoupon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminCoupon>>, {data: BodyType<AdminCouponInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminCouponMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminCoupon>>>
+    export type CreateAdminCouponMutationBody = BodyType<AdminCouponInput>
+    export type CreateAdminCouponMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Create a promotional coupon code (admin only)
+ */
+export const useCreateAdminCoupon = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminCoupon>>, TError,{data: BodyType<AdminCouponInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminCoupon>>,
+        TError,
+        {data: BodyType<AdminCouponInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminCouponMutationOptions(options));
+    }
+
+export const getListAdminCouponsUrl = () => {
+
+
+
+
+  return `/api/admin/coupons`
+}
+
+/**
+ * @summary List all coupons with usage counts (admin only)
+ */
+export const listAdminCoupons = async ( options?: RequestInit): Promise<AdminCoupon[]> => {
+
+  return customFetch<AdminCoupon[]>(getListAdminCouponsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCouponsQueryKey = () => {
+    return [
+    `/api/admin/coupons`
+    ] as const;
+    }
+
+
+export const getListAdminCouponsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCoupons>>, TError = ErrorType<ApiError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCoupons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCouponsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCoupons>>> = ({ signal }) => listAdminCoupons({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCoupons>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCouponsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCoupons>>>
+export type ListAdminCouponsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary List all coupons with usage counts (admin only)
+ */
+
+export function useListAdminCoupons<TData = Awaited<ReturnType<typeof listAdminCoupons>>, TError = ErrorType<ApiError>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCoupons>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCouponsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRedeemCouponUrl = () => {
+
+
+
+
+  return `/api/billing/coupons/redeem`
+}
+
+/**
+ * @summary Redeem a promotional coupon code (free Pro trial)
+ */
+export const redeemCoupon = async (couponRedeemInput: CouponRedeemInput, options?: RequestInit): Promise<RedeemCoupon200> => {
+
+  return customFetch<RedeemCoupon200>(getRedeemCouponUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      couponRedeemInput,)
+  }
+);}
+
+
+
+
+export const getRedeemCouponMutationOptions = <TError = ErrorType<CouponRedeemError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemCoupon>>, TError,{data: BodyType<CouponRedeemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof redeemCoupon>>, TError,{data: BodyType<CouponRedeemInput>}, TContext> => {
+
+const mutationKey = ['redeemCoupon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof redeemCoupon>>, {data: BodyType<CouponRedeemInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  redeemCoupon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RedeemCouponMutationResult = NonNullable<Awaited<ReturnType<typeof redeemCoupon>>>
+    export type RedeemCouponMutationBody = BodyType<CouponRedeemInput>
+    export type RedeemCouponMutationError = ErrorType<CouponRedeemError>
+
+    /**
+ * @summary Redeem a promotional coupon code (free Pro trial)
+ */
+export const useRedeemCoupon = <TError = ErrorType<CouponRedeemError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof redeemCoupon>>, TError,{data: BodyType<CouponRedeemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof redeemCoupon>>,
+        TError,
+        {data: BodyType<CouponRedeemInput>},
+        TContext
+      > => {
+      return useMutation(getRedeemCouponMutationOptions(options));
+    }
 
 export const getListQuotesUrl = (params?: ListQuotesParams,) => {
   const normalizedParams = new URLSearchParams();

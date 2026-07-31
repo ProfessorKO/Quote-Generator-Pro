@@ -238,6 +238,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /admin/coupons:
+    post:
+      operationId: createAdminCoupon
+      tags: [admin]
+      summary: Create a promotional coupon code (admin only)
+      description: >
+        Creates a free_trial coupon. Requires the signed-in user's email to be
+        listed in ADMIN_EMAILS. This replaces direct SQL inserts, which only
+        work in development (production DB access is read-only).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCouponInput"
+      responses:
+        "200":
+          description: Created coupon
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCoupon"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: A coupon with this code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    get:
+      operationId: listAdminCoupons
+      tags: [admin]
+      summary: List all coupons with usage counts (admin only)
+      responses:
+        "200":
+          description: All coupons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminCoupon"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /billing/coupons/redeem:
+    post:
+      operationId: redeemCoupon
+      tags: [billing]
+      summary: Redeem a promotional coupon code (free Pro trial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CouponRedeemInput"
+      responses:
+        "200":
+          description: Trial granted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result, trialDays, trialEndsAt]
+                properties:
+                  result:
+                    type: string
+                    enum: [trial_started]
+                  trialDays:
+                    type: integer
+                  trialEndsAt:
+                    type: string
+        "400":
+          description: Coupon invalid, expired, exhausted, or already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponRedeemError"
+
   /quotes:
     get:
       operationId: listQuotes
@@ -704,11 +792,16 @@ components:
     BillingStatus:
       type: object
       required:
-        [plan, cancelAtPeriodEnd, credits, usage, limits, templatesCount, creditPacks]
+        [plan, planSource, cancelAtPeriodEnd, credits, usage, limits, templatesCount, creditPacks]
       properties:
         plan:
           type: string
           enum: [pro, free]
+        planSource:
+          type: string
+          enum: [subscription, trial, none]
+        trialEndsAt:
+          type: [string, "null"]
         cancelAtPeriodEnd:
           type: boolean
         currentPeriodEnd:
@@ -781,6 +874,77 @@ components:
           enum: [LIMIT_REACHED]
         action:
           type: string
+    CouponRedeemInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+
+    CouponRedeemError:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            [INVALID_CODE, EXPIRED, MAX_USES_REACHED, ALREADY_REDEEMED, ALREADY_PRO]
+
+    AdminCouponInput:
+      type: object
+      required: [code, freeTrialDays]
+      properties:
+        code:
+          type: string
+        description:
+          type: [string, "null"]
+        freeTrialDays:
+          type: integer
+          minimum: 1
+        maxUses:
+          type: [integer, "null"]
+          description: Null = unlimited redemptions
+        userId:
+          type: [string, "null"]
+          description: Clerk user id for a user-specific coupon; null = public
+        expiresAt:
+          type: [string, "null"]
+          description: ISO timestamp; null = never expires
+        isActive:
+          type: boolean
+
+    AdminCoupon:
+      type: object
+      required:
+        [id, code, discountType, freeTrialDays, usedCount, isActive, createdAt]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        description:
+          type: [string, "null"]
+        discountType:
+          type: string
+        freeTrialDays:
+          type: integer
+        maxUses:
+          type: [integer, "null"]
+        usedCount:
+          type: integer
+        userId:
+          type: [string, "null"]
+        expiresAt:
+          type: [string, "null"]
+        isActive:
+          type: boolean
+        createdBy:
+          type: [string, "null"]
+        createdAt:
+          type: string
+
     HealthStatus:
       type: object
       properties:

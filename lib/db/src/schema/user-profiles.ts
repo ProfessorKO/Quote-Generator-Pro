@@ -42,6 +42,14 @@ export const userProfilesTable = pgTable("user_profiles", {
   subscriptionStateUpdatedAt: timestamp("subscription_state_updated_at", {
     withTimezone: true,
   }),
+  // Coupon-granted Pro trial (no Stripe involved). While this timestamp is
+  // in the future AND there is no active paid subscription, billing status
+  // derives plan "pro" (source "trial"). Expiry needs no cron — derivation
+  // simply stops treating the user as Pro. Deliberately NOT mirrored into
+  // `plan`/`subscription_status`, which stay reserved for Stripe state so the
+  // mirror-freshness logic (#44) is untouched. A paid subscription always
+  // supersedes an unexpired trial.
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   // Pay-as-you-go credit balance. 1 credit = 1 action (new quote, voice
   // edit, email, or PDF download). Credits never expire and are consumed
   // before free-tier limits are applied.

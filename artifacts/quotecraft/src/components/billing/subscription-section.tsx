@@ -22,6 +22,7 @@ import {
   useCancelBillingSubscription,
 } from "@workspace/api-client-react";
 import { CreditPacks } from "@/components/billing/credit-packs";
+import { CouponInput } from "@/components/billing/coupon-input";
 import { useBilling, useInvalidateBilling } from "@/lib/billing";
 
 const CANCEL_REASONS = [
@@ -163,6 +164,11 @@ export function SubscriptionSection() {
   }
 
   const isPro = billing.plan === "pro";
+  // Coupon-granted free trial: Pro access without a Stripe subscription.
+  const isTrial = billing.planSource === "trial";
+  const trialEnd = billing.trialEndsAt
+    ? format(new Date(billing.trialEndsAt), "d MMM yyyy")
+    : null;
   const periodEnd = billing.currentPeriodEnd
     ? format(new Date(billing.currentPeriodEnd), "d MMM yyyy")
     : null;
@@ -188,22 +194,29 @@ export function SubscriptionSection() {
         <div>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-sm">
-              {isPro ? "QuoteCraft Pro" : "Free plan"}
+              {isPro ? (isTrial ? "QuoteCraft Pro (trial)" : "QuoteCraft Pro") : "Free plan"}
             </p>
             {isPro && (
               <Badge className="text-[10px]">
                 <Crown className="w-3 h-3 mr-0.5" />
-                Pro
+                {isTrial ? "Pro trial" : "Pro"}
               </Badge>
             )}
-            {isPro && billing.cancelAtPeriodEnd && (
+            {isTrial && (
+              <Badge variant="secondary" className="text-[10px]">
+                Ends {trialEnd ?? "soon"}
+              </Badge>
+            )}
+            {isPro && !isTrial && billing.cancelAtPeriodEnd && (
               <Badge variant="secondary" className="text-[10px]">
                 Ends {periodEnd ?? "soon"}
               </Badge>
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {isPro
+            {isTrial
+              ? `Free Pro trial — everything unlimited until ${trialEnd ?? "your trial ends"}. Subscribe any time to keep Pro.`
+              : isPro
               ? billing.cancelAtPeriodEnd
                 ? "Unlimited until your plan ends — you keep all your templates after."
                 : `Unlimited quotes, voice edits, emails & PDFs. $4.99/month${periodEnd ? ` · renews ${periodEnd}` : ""}.`
@@ -247,8 +260,9 @@ export function SubscriptionSection() {
         <span className="text-sm font-bold">{billing.credits}</span>
       </div>
 
-      {/* CP8 — subscribe */}
-      {(!isPro || billing.cancelAtPeriodEnd) && (
+      {/* CP8 — subscribe (trial users can subscribe mid-trial; the paid
+          plan takes over from the trial) */}
+      {(!isPro || isTrial || billing.cancelAtPeriodEnd) && (
         <Button
           className="w-full h-11 font-semibold"
           onClick={subscribe}
@@ -259,9 +273,14 @@ export function SubscriptionSection() {
           ) : (
             <Crown className="w-4 h-4" />
           )}
-          {isPro ? "Keep Pro — undo cancellation" : "Go Pro — $4.99/month"}
+          {isPro && !isTrial
+            ? "Keep Pro — undo cancellation"
+            : "Go Pro — $4.99/month"}
         </Button>
       )}
+
+      {/* Coupon code — free users only (Pro/trial users can't redeem) */}
+      {!isPro && <CouponInput />}
 
       {/* CP9 — credit packs (useful on free; also fine for Pro top-ups) */}
       {!isPro && (
@@ -271,8 +290,8 @@ export function SubscriptionSection() {
         </div>
       )}
 
-      {/* CP7 — cancel */}
-      {isPro && !billing.cancelAtPeriodEnd && (
+      {/* CP7 — cancel (paid subscriptions only; trials just lapse) */}
+      {isPro && !isTrial && !billing.cancelAtPeriodEnd && (
         <Button
           variant="ghost"
           className="w-full text-muted-foreground"

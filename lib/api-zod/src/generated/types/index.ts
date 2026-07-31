@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminCoupon';
+export * from './adminCouponInput';
 export * from './adminUser';
 export * from './apiError';
 export * from './billingCancelInput';
@@ -17,11 +19,15 @@ export * from './billingConfirmResult';
 export * from './billingConfirmResultResult';
 export * from './billingStatus';
 export * from './billingStatusPlan';
+export * from './billingStatusPlanSource';
 export * from './businessProfile';
 export * from './businessProfileInput';
 export * from './cancelBillingSubscription200';
 export * from './consumePdfDownload200';
 export * from './consumePdfDownload200Source';
+export * from './couponRedeemError';
+export * from './couponRedeemErrorCode';
+export * from './couponRedeemInput';
 export * from './creditPack';
 export * from './emailRecord';
 export * from './emailTemplate';
@@ -50,6 +56,8 @@ export * from './quoteRecordInput';
 export * from './quoteSettings';
 export * from './quoteTemplate';
 export * from './quoteTemplateInput';
+export * from './redeemCoupon200';
+export * from './redeemCoupon200Result';
 export * from './sendQuoteEmailInput';
 export * from './usageSnapshot';
 export * from './voiceCommandInput';

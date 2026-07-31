@@ -6,12 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BillingStatusPlan } from './billingStatusPlan';
+import type { BillingStatusPlanSource } from './billingStatusPlanSource';
 import type { CreditPack } from './creditPack';
 import type { FreeLimits } from './freeLimits';
 import type { UsageSnapshot } from './usageSnapshot';
 
 export interface BillingStatus {
   plan: BillingStatusPlan;
+  planSource: BillingStatusPlanSource;
+  /** @nullable */
+  trialEndsAt?: string | null;
   cancelAtPeriodEnd: boolean;
   /** @nullable */
   currentPeriodEnd?: string | null;

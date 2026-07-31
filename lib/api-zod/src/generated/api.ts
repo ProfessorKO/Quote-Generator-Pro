@@ -312,6 +312,74 @@ export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
 
 
 /**
+ * Creates a free_trial coupon. Requires the signed-in user's email to be listed in ADMIN_EMAILS. This replaces direct SQL inserts, which only work in development (production DB access is read-only).
+
+ * @summary Create a promotional coupon code (admin only)
+ */
+
+
+
+export const CreateAdminCouponBody = zod.object({
+  "code": zod.string(),
+  "description": zod.string().nullish(),
+  "freeTrialDays": zod.number().min(1),
+  "maxUses": zod.number().nullish().describe('Null = unlimited redemptions'),
+  "userId": zod.string().nullish().describe('Clerk user id for a user-specific coupon; null = public'),
+  "expiresAt": zod.string().nullish().describe('ISO timestamp; null = never expires'),
+  "isActive": zod.boolean().optional()
+})
+
+export const CreateAdminCouponResponse = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "description": zod.string().nullish(),
+  "discountType": zod.string(),
+  "freeTrialDays": zod.number(),
+  "maxUses": zod.number().nullish(),
+  "usedCount": zod.number(),
+  "userId": zod.string().nullish(),
+  "expiresAt": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List all coupons with usage counts (admin only)
+ */
+export const ListAdminCouponsResponseItem = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "description": zod.string().nullish(),
+  "discountType": zod.string(),
+  "freeTrialDays": zod.number(),
+  "maxUses": zod.number().nullish(),
+  "usedCount": zod.number(),
+  "userId": zod.string().nullish(),
+  "expiresAt": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAdminCouponsResponse = zod.array(ListAdminCouponsResponseItem)
+
+
+/**
+ * @summary Redeem a promotional coupon code (free Pro trial)
+ */
+export const RedeemCouponBody = zod.object({
+  "code": zod.string()
+})
+
+export const RedeemCouponResponse = zod.object({
+  "result": zod.enum(['trial_started']),
+  "trialDays": zod.number(),
+  "trialEndsAt": zod.string()
+})
+
+
+/**
  * @summary List the current user's quote history with optional filters
  */
 export const ListQuotesQueryParams = zod.object({
@@ -638,6 +706,8 @@ export const GenerateOpenaiImageResponse = zod.object({
  */
 export const GetBillingStatusResponse = zod.object({
   "plan": zod.enum(['pro', 'free']),
+  "planSource": zod.enum(['subscription', 'trial', 'none']),
+  "trialEndsAt": zod.string().nullish(),
   "cancelAtPeriodEnd": zod.boolean(),
   "currentPeriodEnd": zod.string().nullish(),
   "credits": zod.number(),

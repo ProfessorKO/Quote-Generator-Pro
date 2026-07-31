@@ -1,8 +1,13 @@
 import { Router, type IRouter } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { clerkClient } from "@clerk/express";
-import { asc } from "drizzle-orm";
-import { db, userProfilesTable, businessProfilesTable } from "@workspace/db";
+import { asc, desc } from "drizzle-orm";
+import {
+  db,
+  userProfilesTable,
+  businessProfilesTable,
+  couponsTable,
+} from "@workspace/db";
 import { ListAdminUsersResponse } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { syncUsersFromClerk } from "../lib/user-sync";
@@ -88,6 +93,93 @@ router.get(
     }));
 
     res.json(ListAdminUsersResponse.parse(rows));
+  },
+);
+
+// ---- Coupons (lean v1: no portal UI; owner creates codes via these
+// endpoints because direct SQL inserts only work in development — the
+// production DB is read-only from outside the app) ----
+
+function serializeCoupon(c: typeof couponsTable.$inferSelect) {
+  return {
+    id: c.id,
+    code: c.code,
+    description: c.description,
+    discountType: c.discountType,
+    freeTrialDays: c.freeTrialDays,
+    maxUses: c.maxUses,
+    usedCount: c.usedCount,
+    userId: c.userId,
+    expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
+    isActive: c.isActive,
+    createdBy: c.createdBy,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
+router.post(
+  "/admin/coupons",
+  requireAuth,
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const adminId = (req as AuthedRequest).userId;
+    const body = req.body as {
+      code?: string;
+      description?: string | null;
+      freeTrialDays?: number;
+      maxUses?: number | null;
+      userId?: string | null;
+      expiresAt?: string | null;
+      isActive?: boolean;
+    };
+
+    const code = (body.code ?? "").trim();
+    const freeTrialDays = Number(body.freeTrialDays);
+    if (!code || !Number.isInteger(freeTrialDays) || freeTrialDays < 1) {
+      res.status(400).json({
+        error: "code and freeTrialDays (positive integer) are required",
+      });
+      return;
+    }
+    const expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
+    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+      res.status(400).json({ error: "expiresAt must be a valid ISO timestamp" });
+      return;
+    }
+
+    const [created] = await db
+      .insert(couponsTable)
+      .values({
+        code,
+        description: body.description ?? null,
+        discountType: "free_trial",
+        freeTrialDays,
+        maxUses: body.maxUses ?? null,
+        userId: body.userId ?? null,
+        expiresAt,
+        isActive: body.isActive ?? true,
+        createdBy: adminId,
+      })
+      .onConflictDoNothing({ target: couponsTable.code })
+      .returning();
+    if (!created) {
+      res.status(409).json({ error: "A coupon with this code already exists" });
+      return;
+    }
+    res.json(serializeCoupon(created));
+  },
+);
+
+router.get(
+  "/admin/coupons",
+  requireAuth,
+  requireAdmin,
+  async (_req, res): Promise<void> => {
+    const coupons = await db
+      .select()
+      .from(couponsTable)
+      .orderBy(desc(couponsTable.createdAt));
+    res.json(coupons.map(serializeCoupon));
   },
 );
 
