@@ -136,6 +136,39 @@ async function main() {
     "ALREADY_REDEEMED",
   );
 
+  // 8. Concurrent redemption of a coupon with ONE remaining use — exactly
+  // one of two simultaneous users may win (FOR UPDATE serializes them).
+  const userD = `${P}user_d`;
+  const userE = `${P}user_e`;
+  for (const uid of [userD, userE]) {
+    await db
+      .insert(userProfilesTable)
+      .values({ userId: uid, email: `${uid}@example.test` });
+  }
+  await db
+    .insert(couponsTable)
+    .values({ code: `${P}LASTONE`, freeTrialDays: 7, maxUses: 1 });
+  const results = await Promise.allSettled([
+    redeemCoupon(userD, `${P}LASTONE`),
+    redeemCoupon(userE, `${P}LASTONE`),
+  ]);
+  const wins = results.filter((r) => r.status === "fulfilled").length;
+  const maxOut = results.filter(
+    (r) =>
+      r.status === "rejected" &&
+      r.reason instanceof CouponError &&
+      r.reason.code === "MAX_USES_REACHED",
+  ).length;
+  check(
+    "concurrent max-uses: exactly one winner",
+    wins === 1 && maxOut === 1,
+    JSON.stringify(results.map((r) => r.status)),
+  );
+  const [{ used_count: lastUsed }] = (
+    await db.execute(sql`SELECT used_count FROM coupons WHERE code = ${P + "LASTONE"}`)
+  ).rows as [{ used_count: number }];
+  check("concurrent max-uses: used_count is exactly 1", lastUsed === 1);
+
   await cleanup();
   console.log(failures === 0 ? "\nALL TESTS PASSED" : `\n${failures} TEST(S) FAILED`);
   process.exit(failures === 0 ? 0 : 1);
