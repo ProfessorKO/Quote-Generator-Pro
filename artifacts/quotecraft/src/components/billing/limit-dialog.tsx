@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Crown, Coins, ArrowLeft } from "lucide-react";
+import { Loader2, Crown, Coins, Ticket, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCreateBillingCheckout } from "@workspace/api-client-react";
 import { CreditPacks } from "@/components/billing/credit-packs";
+import { CouponInput } from "@/components/billing/coupon-input";
 import { useBilling, type LimitAction } from "@/lib/billing";
 
 // CP1–CP5 — action-specific copy for the free-tier limit dialogs.
@@ -62,13 +63,13 @@ interface LimitDialogProps {
 export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
   const checkout = useCreateBillingCheckout();
   const { data: billing } = useBilling();
-  const [showPacks, setShowPacks] = useState(false);
+  const [view, setView] = useState<"options" | "packs" | "coupon">("options");
 
-  // Every (re)open must start on the initial view (Go Pro + Buy credits),
-  // regardless of how the dialog was last dismissed — closing via the
-  // "Maybe later" button bypasses the Dialog onOpenChange reset below.
+  // Every (re)open must start on the initial view (Go Pro + Buy credits +
+  // coupon), regardless of how the dialog was last dismissed — closing via
+  // the "Maybe later" button bypasses the Dialog onOpenChange reset below.
   useEffect(() => {
-    if (action !== null) setShowPacks(false);
+    if (action !== null) setView("options");
   }, [action]);
 
   const copy = action ? COPY[action] : null;
@@ -96,7 +97,7 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
     <Dialog
       open={action !== null}
       onOpenChange={(o) => {
-        if (!o) setShowPacks(false);
+        if (!o) setView("options");
         onOpenChange(o);
       }}
     >
@@ -108,16 +109,29 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        {showPacks ? (
+        {view === "packs" ? (
           <div className="space-y-2">
             <button
-              onClick={() => setShowPacks(false)}
+              onClick={() => setView("options")}
               className="flex items-center gap-1 text-xs font-semibold text-primary"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
             <CreditPacks />
+          </div>
+        ) : view === "coupon" ? (
+          <div className="space-y-2">
+            <button
+              onClick={() => setView("options")}
+              className="flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back
+            </button>
+            {/* Redeeming grants Pro immediately, which lifts the limit — the
+                dialog closes itself so the user can retry their action. */}
+            <CouponInput onRedeemed={() => onOpenChange(false)} />
           </div>
         ) : (
           <div className="space-y-2 py-1">
@@ -136,10 +150,18 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
             <Button
               variant="outline"
               className="w-full h-auto min-h-11 whitespace-normal text-center"
-              onClick={() => setShowPacks(true)}
+              onClick={() => setView("packs")}
             >
               <Coins className="w-4 h-4" />
               <span className="min-w-0">Buy credits from $2</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-auto min-h-11 whitespace-normal text-center"
+              onClick={() => setView("coupon")}
+            >
+              <Ticket className="w-4 h-4" />
+              <span className="min-w-0">Enter coupon code</span>
             </Button>
             {typeof billing?.credits === "number" && billing.credits > 0 && (
               <p className="text-xs text-center text-muted-foreground">
@@ -155,7 +177,7 @@ export function LimitDialog({ action, onOpenChange }: LimitDialogProps) {
             variant="ghost"
             className="w-full sm:w-auto"
             onClick={() => {
-              setShowPacks(false);
+              setView("options");
               onOpenChange(false);
             }}
           >

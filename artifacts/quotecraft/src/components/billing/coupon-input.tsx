@@ -11,7 +11,12 @@ import { useInvalidateBilling } from "@/lib/billing";
  * Coupon code input on the billing screen. Redeeming a valid free_trial
  * code grants Pro immediately (no Stripe checkout involved).
  */
-export function CouponInput() {
+export function CouponInput({
+  onRedeemed,
+}: {
+  /** Called after a successful redemption (e.g. to close a limit dialog). */
+  onRedeemed?: () => void;
+} = {}) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const redeem = useRedeemCoupon();
@@ -36,6 +41,7 @@ export function CouponInput() {
           toast.success(
             `Coupon applied! You're on Pro for ${res.trialDays} days${until ? ` — until ${until}` : ""}.`,
           );
+          onRedeemed?.();
         },
         onError: (err) => {
           const e = err as { data?: { error?: string } } | null;
@@ -65,6 +71,7 @@ export function CouponInput() {
             if (e.key === "Enter") apply();
           }}
           placeholder="Enter coupon code"
+          aria-label="Coupon code"
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
