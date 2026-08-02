@@ -65,7 +65,12 @@ export default function Landing() {
               <div className="bg-accent text-accent-foreground p-2.5 rounded-xl shadow-lg">
                 <FileText className="w-6 h-6" />
               </div>
-              <span className="font-bold text-xl tracking-tight">QuoteCraft</span>
+              <span className="font-bold text-xl tracking-tight">
+                Quote Mate
+                <span className="ml-2 align-middle text-xs font-medium tracking-wide text-primary-foreground/70 uppercase">
+                  Work Mates Pro
+                </span>
+              </span>
             </div>
 
             <h1 className="mt-9 text-4xl font-bold leading-[1.1] tracking-tight">

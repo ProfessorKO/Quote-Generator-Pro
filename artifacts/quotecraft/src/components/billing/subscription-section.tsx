@@ -194,7 +194,7 @@ export function SubscriptionSection() {
         <div>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-sm">
-              {isPro ? (isTrial ? "QuoteCraft Pro (trial)" : "QuoteCraft Pro") : "Free plan"}
+              {isPro ? (isTrial ? "Quote Mate Pro (trial)" : "Quote Mate Pro") : "Free plan"}
             </p>
             {isPro && (
               <Badge className="text-[10px]">

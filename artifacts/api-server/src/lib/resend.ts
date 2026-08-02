@@ -137,7 +137,7 @@ export async function sendQuoteEmail(params: SendEmailParams): Promise<void> {
   const fromEmail = await getFromEmail();
 
   const body: Record<string, unknown> = {
-    from: `QuoteCraft <${fromEmail}>`,
+    from: `Quote Mate <${fromEmail}>`,
     to: [params.to],
     subject: params.subject,
     html: params.html,

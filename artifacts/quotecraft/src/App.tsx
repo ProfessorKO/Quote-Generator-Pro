@@ -248,7 +248,7 @@ function ClerkProviderWithRoutes() {
         signIn: {
           start: {
             title: "Welcome back",
-            subtitle: "Sign in to your QuoteCraft account",
+            subtitle: "Sign in to your Quote Mate account",
           },
         },
         signUp: {
