@@ -18,6 +18,7 @@ import {
 } from "../lib/billing";
 
 import { upsertCurrentUser } from "../lib/user-sync";
+import { isAllowedOrigin, appBaseUrl } from "../lib/allowedOrigins";
 import { redeemCoupon, CouponError } from "../lib/coupons";
 
 // NOTE (#44): the stripe.* mirror tables are read-only for the app role
@@ -56,17 +57,12 @@ async function getCatalog(): Promise<CatalogRow[]> {
 }
 
 function appOrigin(req: Request): string {
+  // Only trust the Origin header if it matches the configured allowlist;
+  // otherwise fall back to the canonical app URL. Never use attacker-
+  // controllable headers to build Stripe redirect URLs (open redirect).
   const origin = req.get("origin");
-  if (origin) return origin;
-  const referer = req.get("referer");
-  if (referer) {
-    try {
-      return new URL(referer).origin;
-    } catch {
-      /* fall through */
-    }
-  }
-  return `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+  if (origin && isAllowedOrigin(origin)) return origin;
+  return appBaseUrl();
 }
 
 async function getOrCreateCustomer(userId: string): Promise<string> {
