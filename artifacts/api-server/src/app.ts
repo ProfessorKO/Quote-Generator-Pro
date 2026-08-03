@@ -15,6 +15,13 @@ import { WebhookHandlers } from "./lib/webhookHandlers";
 
 const app: Express = express();
 
+// The API runs behind exactly one trusted hop (Replit's proxy). Trust only
+// that hop: Express then takes req.ip from the RIGHTMOST X-Forwarded-For
+// entry — the one appended by the trusted proxy — so clients cannot spoof
+// their identity (used for anonymous IP rate limiting) by supplying their
+// own X-Forwarded-For values, which only ever prepend to the left.
+app.set("trust proxy", 1);
+
 // Stripe webhook must be registered BEFORE express.json() — it needs the raw
 // request body (Buffer) to verify the Stripe signature.
 app.post(

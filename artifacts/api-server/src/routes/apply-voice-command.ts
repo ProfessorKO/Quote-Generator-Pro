@@ -9,10 +9,11 @@ import {
   limitReachedResponse,
 } from "../lib/billing";
 import { upsertCurrentUser } from "../lib/user-sync";
+import { anonAiRateLimiter } from "../lib/anonRateLimit";
 
 const router: IRouter = Router();
 
-router.post("/apply-voice-command", optionalAuth, async (req, res): Promise<void> => {
+router.post("/apply-voice-command", optionalAuth, anonAiRateLimiter, async (req, res): Promise<void> => {
   const parsed = ApplyVoiceCommandBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
