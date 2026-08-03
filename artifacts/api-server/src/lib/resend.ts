@@ -44,6 +44,12 @@ async function getFromEmail(): Promise<string> {
   if (process.env.NODE_ENV !== "production") {
     return RESEND_TEST_FROM;
   }
+  // Preferred: explicit branded sender (e.g. quotemate@workmatespro.com.au),
+  // set once the domain is verified in Resend. Falls back to the connector's
+  // configured from_email.
+  if (process.env.QUOTE_FROM_EMAIL) {
+    return process.env.QUOTE_FROM_EMAIL;
+  }
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -138,6 +144,8 @@ export async function sendQuoteEmail(params: SendEmailParams): Promise<void> {
 
   const body: Record<string, unknown> = {
     from: `Quote Mate <${fromEmail}>`,
+    // Replies from customers should land in the support inbox, not bounce.
+    reply_to: process.env.QUOTE_REPLY_TO_EMAIL ?? "support@workmatespro.com.au",
     to: [params.to],
     subject: params.subject,
     html: params.html,
