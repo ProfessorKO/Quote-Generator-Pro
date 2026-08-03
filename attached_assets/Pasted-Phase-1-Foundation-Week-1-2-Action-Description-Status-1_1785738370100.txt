@@ -1,0 +1,93 @@
+Phase 1: Foundation (Week 1–2)
+
+# Action Description Status
+1 All bugs & enhancements fixed All 52 code issues resolved ✅ Complete
+2 Secure domain: workmatespro.com.au Primary domain registered ✅ Complete
+3 Secure domain: workmatespro.com .com variant for brand protection ✅ Complete
+4 Secure domain: workmatespro.au .au variant for brand protection ✅ Complete
+5 Rebrand app to "Quote Mate" Logo, browser title, sign‑in page, billing plan name ✅ Complete
+6 Set up GoDaddy DNS for root domain Point workmatespro.com.au to Replit (A/CNAME) ⚠️ To Do
+7 Set up GoDaddy DNS for subdomain quotemate.workmatespro.com.au CNAME → Replit ⚠️ To Do
+8 SSL certificate Auto‑provisioned by Replit when custom domain is added ⚠️ To Do
+9 Run database migrations on production Apply all schema changes to production DB ⚠️ To Do
+
+---
+
+🟡 Phase 2: Email & Domain Verification (Week 2–3)
+
+# Action Description Status
+10 Set up Google Workspace Single mailbox: support@workmatespro.com.au ⚠️ To Do
+11 Add aliases in Google Workspace noreply_quotemate@workmatespro.com.au (and future aliases) ⚠️ To Do
+12 Set FROM_EMAIL in Replit Secrets noreply_quotemate@workmatespro.com.au ⚠️ To Do
+13 Add TXT/SPF records for Google Workspace v=spf1 include:_spf.google.com ~all ⚠️ To Do
+14 Add MX records for Google Workspace aspmx.l.google.com etc. ⚠️ To Do
+15 Verify Resend domain Add SPF/DKIM TXT records from Resend dashboard ⚠️ To Do
+16 Set RESEND_API_KEY in Replit Secrets Resend production API key ⚠️ To Do
+17 Complete Clerk Authentication DNS Setup Add CNAME records from Clerk dashboard ⚠️ To Do
+18 Update Clerk Application Name "Quote Mate" (already done) ✅ Complete
+19 Update Clerk Google OAuth consent screen Show "Quote Mate" ⚠️ To Do
+
+---
+
+🟢 Phase 3: Payments & Billing (Week 3)
+
+# Action Description Status
+20 Set STRIPE_SECRET_KEY in Replit Secrets Production Stripe key ⚠️ To Do
+21 Set STRIPE_WEBHOOK_SECRET in Replit Secrets Webhook signing secret ⚠️ To Do
+22 Create Stripe Pro subscription product Quote Mate Pro plan ($4.99/month) ⚠️ To Do
+23 Create Stripe credit packs in live mode $2, $4, $10, $20 credit packs ⚠️ To Do
+24 Create Stripe promo codes (optional) For free trials / discounts (e.g., ProTrial202607) ⚠️ To Do
+25 Set ADMIN_EMAIL in Replit Secrets admin@workmatespro.com.au ⚠️ To Do
+
+---
+
+🟣 Phase 4: Security & Compliance (Week 3–4)
+
+# Action Description Status
+26 Set NODE_ENV=production in Replit Secrets Enable production mode ⚠️ To Do
+27 Update CORS to allow only production domain workmatespro.com.au and subdomains ⚠️ To Do
+28 Configure API rate limits for production Prevent abuse ⚠️ To Do
+29 Privacy Policy page GDPR / Australian Privacy Act compliance ⚠️ To Do
+30 Terms of Service page Legal terms for using the app ⚠️ To Do
+31 Marketing consent checkbox (unticked) AU Spam Act compliance ✅ Complete
+32 Unsubscribe link in marketing emails AU Spam Act compliance ⚠️ To Do
+
+---
+
+🟠 Phase 5: Branding & User Experience (Week 4)
+
+# Action Description Status
+33 Update app name in all UI "Quote Mate" (already done) ✅ Complete
+34 Update PDF header branding "Quote Mate" ✅ Complete
+35 Update email footer branding "Quote Mate" ✅ Complete
+36 Update meta tags, title, favicon Browser tab and social sharing ⚠️ To Do
+37 Update landing page copy "Work Mates Pro — Quote Mate" ⚠️ To Do
+
+---
+
+🔵 Phase 6: Testing (Week 4–5)
+
+# Action Description Status
+38 Anonymous quote generation Mic 1 + text input ⚠️ To Do
+39 Voice edit (Mic 2) Test voice editing ⚠️ To Do
+40 Full auth flow Sign up → verify email → complete profile → dashboard ⚠️ To Do
+41 Gated actions Save template, download PDF, email quote ⚠️ To Do
+42 Subscription lifecycle Subscribe → cancel → undo → re‑subscribe ⚠️ To Do
+43 Credits flow Purchase → use → verify balance ⚠️ To Do
+44 Coupon flow Enter code → validate → apply discount/free trial ⚠️ To Do
+45 Mobile testing iPhone (Safari) and Android (Chrome) ⚠️ To Do
+46 Desktop testing Chrome, Edge, Firefox ⚠️ To Do
+47 Offline detection Error message when generating quote offline ⚠️ To Do
+
+---
+
+🟤 Phase 7: Deployment & Monitoring (Week 5)
+
+# Action Description Status
+48 Deploy latest code to production Push final code to live environment ⚠️ To Do
+49 Post‑deployment smoke test Quick sanity check on critical flows ⚠️ To Do
+50 Schedule automated database backups Prevent data loss ⚠️ To Do
+51 Test backup restore process Ensure backups can be restored ⚠️ To Do
+52 Configure error tracking (e.g., Sentry) Monitor production errors ⚠️ To Do
+53 Monitor server logs Watch for issues post‑launch ⚠️ To Do
+54 Prepare rollback plan Fallback if critical issues arise ⚠️ To Do
