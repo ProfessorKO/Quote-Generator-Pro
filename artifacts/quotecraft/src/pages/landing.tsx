@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -142,11 +142,19 @@ export default function Landing() {
             ))}
           </div>
 
-          {/* Trust line */}
+          {/* Trust line + legal footer */}
           <div className="mt-auto pt-8">
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Check className="w-3.5 h-3.5 text-accent" />
               Built for Australian tradies & small businesses
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+              <Link href="/privacy" className="hover:text-foreground underline-offset-2 hover:underline">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-foreground underline-offset-2 hover:underline">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>

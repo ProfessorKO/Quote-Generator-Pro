@@ -13,6 +13,7 @@ import {
   Switch,
   Route,
   Redirect,
+  Link,
   useLocation,
   Router as WouterRouter,
 } from "wouter";
@@ -35,6 +36,12 @@ const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Settings = lazy(() => import("@/pages/settings"));
 const CompleteProfile = lazy(() => import("@/pages/complete-profile"));
 const Admin = lazy(() => import("@/pages/admin"));
+const PrivacyPolicy = lazy(() =>
+  import("@/pages/legal").then((m) => ({ default: m.PrivacyPolicy })),
+);
+const TermsOfService = lazy(() =>
+  import("@/pages/legal").then((m) => ({ default: m.TermsOfService })),
+);
 
 // REQUIRED — copy verbatim. Resolves the key from window.location.hostname.
 const clerkPubKey = publishableKeyFromHost(
@@ -148,9 +155,27 @@ function SignInPage() {
   );
 }
 
+// Clickwrap notice (go-live #29–30): creating an account constitutes
+// agreement to the Terms & Privacy Policy — no separate checkbox required.
+function LegalAgreementNotice() {
+  return (
+    <p className="mt-4 max-w-sm text-center text-xs text-muted-foreground">
+      By creating an account you agree to our{" "}
+      <Link href="/terms" className="underline underline-offset-2">
+        Terms of Service
+      </Link>{" "}
+      and{" "}
+      <Link href="/privacy" className="underline underline-offset-2">
+        Privacy Policy
+      </Link>
+      .
+    </p>
+  );
+}
+
 function SignUpPage() {
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-8">
       <AuthCloseButton />
       <SignUp
         routing="path"
@@ -158,6 +183,7 @@ function SignUpPage() {
         signInUrl={`${basePath}/sign-in`}
         forceRedirectUrl={`${basePath}/post-auth`}
       />
+      <LegalAgreementNotice />
     </div>
   );
 }
@@ -296,6 +322,8 @@ function ClerkProviderWithRoutes() {
                   <Admin />
                 </Protected>
               </Route>
+              <Route path="/privacy" component={PrivacyPolicy} />
+              <Route path="/terms" component={TermsOfService} />
               <Route component={NotFound} />
             </Switch>
           </Suspense>
