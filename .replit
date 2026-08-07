@@ -28,3 +28,7 @@ packages = ["gut", "zip"]
 
 [userenv.shared]
 ADMIN_EMAILS = "cljay_0508@hotmail.com"
+
+[userenv.production]
+QUOTE_FROM_EMAIL = "quotemate@workmatespro.com.au"
+QUOTE_REPLY_TO_EMAIL = "support@workmatespro.com.au"
