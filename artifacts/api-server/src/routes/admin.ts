@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { clerkClient } from "@clerk/express";
-import { asc, desc, sql } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import {
   db,
   userProfilesTable,
@@ -182,31 +182,5 @@ router.get(
     res.json(coupons.map(serializeCoupon));
   },
 );
-
-// ---- TEMPORARY: one-time production data reset ----
-// The production DB is read-only from outside the app, so this token-guarded
-// route lets the deployed app wipe the dev/test data carried into production.
-// REMOVE this route (and the ADMIN_RESET_TOKEN secret) after the reset runs.
-router.post("/admin/reset-all-data", async (req, res): Promise<void> => {
-  const { timingSafeEqual } = await import("node:crypto");
-  const expected = process.env.ADMIN_RESET_TOKEN ?? "";
-  const provided = req.get("x-admin-reset-token") ?? "";
-  const a = Buffer.from(expected);
-  const b = Buffer.from(provided);
-  if (!expected || a.length !== b.length || !timingSafeEqual(a, b)) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  await db.execute(sql`
-    TRUNCATE public.business_profiles, public.conversations,
-             public.coupon_redemptions, public.coupons,
-             public.credit_purchases, public.email_records,
-             public.email_templates, public.messages, public.quotes,
-             public.templates, public.usage_counters, public.user_profiles
-    RESTART IDENTITY CASCADE
-  `);
-  logger.warn("Production data reset executed via admin token");
-  res.json({ ok: true });
-});
 
 export default router;

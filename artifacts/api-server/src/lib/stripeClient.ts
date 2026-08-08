@@ -49,9 +49,24 @@ async function getStripeCredentials(): Promise<{
       };
     }>;
   };
-  const stripeItem = (data.items ?? []).find(
+  // The connection can expose multiple Stripe credential sets (sandbox AND
+  // live once a live account is linked). Deployments must use the live keys;
+  // the workspace uses sandbox. Never just take the first item.
+  const stripeItems = (data.items ?? []).filter(
     (item: { connector_name?: string }) => item.connector_name === "stripe",
   );
+  const wantLive =
+    process.env.REPLIT_DEPLOYMENT === "1" ||
+    Boolean(process.env.WEB_REPL_RENEWAL);
+  const keyOf = (item: (typeof stripeItems)[number]) =>
+    item.settings?.secret_key ?? item.settings?.secret;
+  const matching = stripeItems.find((item) => {
+    const key = keyOf(item);
+    return key && key.startsWith(wantLive ? "sk_live_" : "sk_test_");
+  });
+  // Fall back to any available key rather than failing outright (e.g. a
+  // deployment before the live account is linked).
+  const stripeItem = matching ?? stripeItems.find((item) => keyOf(item));
   const settings = stripeItem?.settings;
   const secretKey = settings?.secret_key ?? settings?.secret;
 
