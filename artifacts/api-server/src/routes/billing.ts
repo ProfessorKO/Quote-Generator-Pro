@@ -82,15 +82,24 @@ function appOrigin(req: Request): string {
 }
 
 async function getOrCreateCustomer(userId: string): Promise<string> {
-  // Make sure the profile row exists (synced from Clerk).
-  await upsertCurrentUser(userId);
-  const [profile] = await db
-    .select({
-      email: userProfilesTable.email,
-      stripeCustomerId: userProfilesTable.stripeCustomerId,
-    })
-    .from(userProfilesTable)
-    .where(eq(userProfilesTable.userId, userId));
+  const loadProfile = async () => {
+    const [row] = await db
+      .select({
+        email: userProfilesTable.email,
+        stripeCustomerId: userProfilesTable.stripeCustomerId,
+      })
+      .from(userProfilesTable)
+      .where(eq(userProfilesTable.userId, userId));
+    return row;
+  };
+
+  // Only hit Clerk when the profile row is missing — the extra Clerk round
+  // trip on every checkout was measurable latency for no benefit.
+  let profile = await loadProfile();
+  if (!profile) {
+    await upsertCurrentUser(userId);
+    profile = await loadProfile();
+  }
   if (!profile) throw new Error("User profile not found");
 
   const stripe = await getUncachableStripeClient();
@@ -178,7 +187,12 @@ router.post("/billing/checkout", requireAuth, async (req, res): Promise<void> =>
     // wins in getSubscriptionInfo), so checkout proceeds normally.
   }
 
-  const catalog = await getCatalog();
+  // Catalog lookup and customer resolution are independent — run them in
+  // parallel to cut checkout latency.
+  const [catalog, customerId] = await Promise.all([
+    getCatalog(),
+    getOrCreateCustomer(userId),
+  ]);
   let priceId: string | undefined;
   if (type === "subscription") {
     priceId = catalog.find((row) => row.quotecraft_key === "pro_plan")?.price_id;
@@ -199,7 +213,6 @@ router.post("/billing/checkout", requireAuth, async (req, res): Promise<void> =>
     return;
   }
 
-  const customerId = await getOrCreateCustomer(userId);
   const origin = appOrigin(req);
   const session = await stripe.checkout.sessions.create({
     customer: customerId,

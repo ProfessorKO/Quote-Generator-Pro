@@ -1,14 +1,27 @@
 import Stripe from "stripe";
 import { StripeSync } from "stripe-replit-sync";
 
+// Short-lived credential cache. Every Stripe call was previously paying a
+// fresh connector-API round trip (and checkout makes several), which added
+// seconds of latency. Keys rotate rarely; 60s of staleness is safe, and any
+// auth failure simply surfaces on the next refresh.
+let credentialsCache: {
+  value: { secretKey: string; webhookSecret?: string };
+  expiresAt: number;
+} | null = null;
+
 /**
  * Fetches Stripe credentials from the Replit connection API.
- * Not cached -- tokens can rotate, so fetch fresh each time.
+ * Cached for 60 seconds to keep request paths fast; refetched after that so
+ * rotated keys are still picked up promptly.
  */
 async function getStripeCredentials(): Promise<{
   secretKey: string;
   webhookSecret?: string;
 }> {
+  if (credentialsCache && credentialsCache.expiresAt > Date.now()) {
+    return credentialsCache.value;
+  }
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -77,10 +90,12 @@ async function getStripeCredentials(): Promise<{
     );
   }
 
-  return {
+  const value = {
     secretKey,
     webhookSecret: settings?.webhook_secret,
   };
+  credentialsCache = { value, expiresAt: Date.now() + 60_000 };
+  return value;
 }
 
 // Account ID per secret key. Keys map immutably to one account, so this
