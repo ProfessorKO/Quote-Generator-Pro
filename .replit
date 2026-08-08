@@ -32,3 +32,4 @@ ADMIN_EMAILS = "cljay_0508@hotmail.com"
 [userenv.production]
 QUOTE_FROM_EMAIL = "quotemate@workmatespro.com.au"
 QUOTE_REPLY_TO_EMAIL = "support@workmatespro.com.au"
+ADMIN_RESET_TOKEN = "77aaa8d348707bdc09b3c763bf6150f7e2006a893b0e7cfc"
