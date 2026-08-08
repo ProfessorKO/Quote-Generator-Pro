@@ -2,7 +2,7 @@ import { getUncachableStripeClient } from "./stripeClient";
 import type Stripe from "stripe";
 
 /**
- * Creates the QuoteCraft billing catalog in Stripe (idempotent):
+ * Creates the Quote Mate billing catalog in Stripe (idempotent):
  *  - Pro Plan: $4.99 AUD/month recurring subscription
  *  - Credit packs (one-time): 10/$2, 20/$4, 50/$10, 100/$20 AUD
  *
@@ -35,7 +35,7 @@ async function main() {
     console.log(`Pro Plan already exists (${pro.id})`);
   } else {
     pro = await stripe.products.create({
-      name: "QuoteCraft Pro",
+      name: "Quote Mate Pro",
       description:
         "Unlimited templates, new quotes, voice edits, emails and PDF downloads.",
       metadata: { quotecraft_key: "pro_plan", type: "subscription" },
@@ -59,7 +59,7 @@ async function main() {
     }
     const product = await stripe.products.create({
       name: `${pack.credits} Credits`,
-      description: `${pack.credits} QuoteCraft credits. 1 credit = 1 action (new quote, voice edit, email or PDF download). Credits never expire.`,
+      description: `${pack.credits} Quote Mate credits. 1 credit = 1 action (new quote, voice edit, email or PDF download). Credits never expire.`,
       metadata: {
         quotecraft_key: key,
         type: "credit_pack",

@@ -38,10 +38,18 @@ interface CatalogRow {
   recurring: unknown;
 }
 
-/** Reads the seeded catalog from the synced stripe.* mirror. */
+/**
+ * Reads the seeded catalog from the synced stripe.* mirror.
+ *
+ * The mirror can accumulate rows from previously connected Stripe accounts
+ * (it is append-only for us and old sandbox rows cannot be deleted), so the
+ * same quotecraft_key can appear more than once. Keep only the newest price
+ * per key -- that is always the row from the currently connected account.
+ */
 async function getCatalog(): Promise<CatalogRow[]> {
   const result = await db.execute(sql`
-    SELECT pr.id AS price_id,
+    SELECT DISTINCT ON (p.metadata ->> 'quotecraft_key')
+           pr.id AS price_id,
            pr.unit_amount::int AS unit_amount,
            pr.currency,
            p.metadata ->> 'quotecraft_key' AS quotecraft_key,
@@ -52,6 +60,7 @@ async function getCatalog(): Promise<CatalogRow[]> {
     WHERE p.active = true
       AND pr.active = true
       AND p.metadata ? 'quotecraft_key'
+    ORDER BY p.metadata ->> 'quotecraft_key', pr.created DESC
   `);
   return result.rows as unknown as CatalogRow[];
 }
