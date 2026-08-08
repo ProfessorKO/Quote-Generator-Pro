@@ -68,6 +68,43 @@ async function getStripeCredentials(): Promise<{
   };
 }
 
+// Account ID per secret key. Keys map immutably to one account, so this
+// cache never goes stale even when credentials rotate or the connection
+// is swapped to a different account.
+const accountIdCache = new Map<string, string>();
+
+/**
+ * Returns the Stripe account ID the current credentials belong to.
+ * Used to scope reads of the stripe.* mirror, which retains rows from
+ * previously connected accounts.
+ */
+export async function getStripeAccountId(): Promise<string> {
+  const { secretKey } = await getStripeCredentials();
+  const cached = accountIdCache.get(secretKey);
+  if (cached) return cached;
+  const resp = await fetch("https://api.stripe.com/v1/account", {
+    headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!resp.ok) {
+    throw new Error(`Failed to resolve Stripe account: ${resp.status}`);
+  }
+  const account = (await resp.json()) as { id: string };
+  accountIdCache.set(secretKey, account.id);
+  return account.id;
+}
+
+/**
+ * Whether the current Stripe credentials are live-mode keys.
+ * In deployments the connector hands out live keys; in the workspace it
+ * hands out sandbox keys. The stripe.* mirror can contain rows from both
+ * modes, so callers must filter by this.
+ */
+export async function isStripeLiveMode(): Promise<boolean> {
+  const { secretKey } = await getStripeCredentials();
+  return secretKey.startsWith("sk_live_");
+}
+
 /**
  * Returns a fresh authenticated Stripe client.
  * Not cached -- fetches credentials on every call so rotated keys are picked up.

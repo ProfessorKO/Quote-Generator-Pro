@@ -1,4 +1,5 @@
 import { sql, eq } from "drizzle-orm";
+import { getStripeAccountId } from "./stripeClient";
 import {
   db,
   userProfilesTable,
@@ -118,6 +119,7 @@ export async function getSubscriptionInfo(
   const result = await db.execute(sql`
     SELECT s.status,
            s.cancel_at_period_end,
+           s._account_id,
            s._updated_at,
            to_char(
              to_timestamp((i.value ->> 'current_period_end')::bigint) AT TIME ZONE 'UTC',
@@ -132,10 +134,29 @@ export async function getSubscriptionInfo(
     | {
         status: string;
         cancel_at_period_end: boolean | null;
+        _account_id: string;
         _updated_at: string | Date | null;
         current_period_end: string | null;
       }
     | undefined;
+
+  // The mirror keeps rows from previously connected Stripe accounts (and
+  // from the sandbox after a live switch). A subscription that belongs to a
+  // different account than the current credentials is dead — clear it so the
+  // user does not keep Pro from a disconnected/test account.
+  if (row && row._account_id !== (await getStripeAccountId())) {
+    await db
+      .update(userProfilesTable)
+      .set({
+        stripeSubscriptionId: null,
+        plan: "free",
+        subscriptionStatus: "cancelled",
+        subscriptionStateUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(userProfilesTable.userId, userId));
+    return nonPaid(null);
+  }
 
   // The stripe.* mirror syncs asynchronously. Right after checkout the
   // subscription row may not exist here yet, even though /billing/confirm

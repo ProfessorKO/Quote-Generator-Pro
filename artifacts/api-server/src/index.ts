@@ -30,8 +30,15 @@ async function initStripe(): Promise<void> {
     "Stripe webhook configured",
   );
 
-  stripeSync
-    .syncBackfill()
+  // syncBackfill() with no params can silently no-op, so force a full
+  // catalog backfill explicitly — without it a fresh environment (or a
+  // newly linked live account) has no products/prices in the mirror and
+  // checkout fails.
+  (async () => {
+    await stripeSync.syncProducts({ created: { gte: 1 } });
+    await stripeSync.syncPrices({ created: { gte: 1 } });
+    await stripeSync.syncBackfill().catch(() => undefined);
+  })()
     .then(() => logger.info("Stripe data synced"))
     .catch((err) => logger.error({ err }, "Error syncing Stripe data"));
 }

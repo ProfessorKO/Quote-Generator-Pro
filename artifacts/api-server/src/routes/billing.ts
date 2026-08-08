@@ -7,7 +7,10 @@ import {
   creditPurchasesTable,
 } from "@workspace/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { getUncachableStripeClient } from "../lib/stripeClient";
+import {
+  getUncachableStripeClient,
+  getStripeAccountId,
+} from "../lib/stripeClient";
 import {
   getBillingStatus,
   getSubscriptionInfo,
@@ -42,11 +45,14 @@ interface CatalogRow {
  * Reads the seeded catalog from the synced stripe.* mirror.
  *
  * The mirror can accumulate rows from previously connected Stripe accounts
- * (it is append-only for us and old sandbox rows cannot be deleted), so the
- * same quotecraft_key can appear more than once. Keep only the newest price
- * per key -- that is always the row from the currently connected account.
+ * (it is append-only for us and old rows cannot be deleted), so the same
+ * quotecraft_key can appear more than once — across accounts and across
+ * live/test mode. Only rows from the currently connected account are usable
+ * (a live key cannot check out another account's or a test price), so scope
+ * by _account_id, then keep the newest price per key.
  */
 async function getCatalog(): Promise<CatalogRow[]> {
+  const accountId = await getStripeAccountId();
   const result = await db.execute(sql`
     SELECT DISTINCT ON (p.metadata ->> 'quotecraft_key')
            pr.id AS price_id,
@@ -59,6 +65,7 @@ async function getCatalog(): Promise<CatalogRow[]> {
     JOIN stripe.products p ON p.id = pr.product
     WHERE p.active = true
       AND pr.active = true
+      AND pr._account_id = ${accountId}
       AND p.metadata ? 'quotecraft_key'
     ORDER BY p.metadata ->> 'quotecraft_key', pr.created DESC
   `);
@@ -85,9 +92,25 @@ async function getOrCreateCustomer(userId: string): Promise<string> {
     .from(userProfilesTable)
     .where(eq(userProfilesTable.userId, userId));
   if (!profile) throw new Error("User profile not found");
-  if (profile.stripeCustomerId) return profile.stripeCustomerId;
 
   const stripe = await getUncachableStripeClient();
+
+  if (profile.stripeCustomerId) {
+    // The stored customer may belong to a previously connected Stripe
+    // account or the other mode (sandbox vs live). Verify it exists in the
+    // current account; if not, fall through and create a fresh one.
+    try {
+      const existing = await stripe.customers.retrieve(
+        profile.stripeCustomerId,
+      );
+      if (!("deleted" in existing && existing.deleted)) {
+        return profile.stripeCustomerId;
+      }
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code !== "resource_missing") throw err;
+    }
+  }
   const customer = await stripe.customers.create({
     email: profile.email,
     metadata: { userId },
