@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import type { QuoteLineItem, QuoteSettings } from "@workspace/api-client-react";
 import { formatAbn, formatAcn } from "./format";
+import { normalizeSettings } from "./quote-record";
 
 export interface PdfHeader {
   businessName: string;
@@ -49,7 +50,8 @@ export function buildPdf(params: {
   /** Enhancement #41 — optional notes shown after totals, before the footer. */
   notes?: string;
 }): jsPDF {
-  const { header, quoteNumber, lineItems, settings, totals } = params;
+  const { header, quoteNumber, lineItems, totals } = params;
+  const settings = normalizeSettings(params.settings);
   const notes = (params.notes ?? "").trim().slice(0, MAX_NOTES_CHARS);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();

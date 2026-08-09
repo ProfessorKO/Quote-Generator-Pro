@@ -15,6 +15,7 @@ import { Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import { normalizeSettings } from "@/lib/quote-record";
 import {
   useUpdateTemplate,
   getListTemplatesQueryKey,
@@ -41,7 +42,7 @@ export function TemplateEditDialog({
     if (!template) return;
     setName(template.name);
     setLineItems(template.lineItems.map((it) => ({ ...it })));
-    setSettings({ ...template.settings });
+    setSettings(normalizeSettings({ ...template.settings }));
   }, [template]);
 
   // Draft autosave (Bug #22). Declared after the seeding effect so a saved
@@ -56,7 +57,7 @@ export function TemplateEditDialog({
       onRestore: (d) => {
         if (typeof d.name === "string") setName(d.name);
         if (Array.isArray(d.lineItems)) setLineItems(d.lineItems);
-        if (d.settings) setSettings(d.settings);
+        if (d.settings) setSettings(normalizeSettings(d.settings));
       },
     },
   );

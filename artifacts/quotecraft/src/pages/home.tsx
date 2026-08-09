@@ -14,7 +14,7 @@ import { useParseQuoteDescription, useApplyVoiceCommand, useCreateTemplate, getL
 import { toast } from "sonner";
 import { ExportPdfDialog } from "@/components/export-pdf-dialog";
 import { EmailQuoteDialog } from "@/components/email-quote-dialog";
-import { buildQuoteRecord } from "@/lib/quote-record";
+import { buildQuoteRecord, normalizeSettings } from "@/lib/quote-record";
 import {
   setPendingAction,
   peekPendingAction,
@@ -96,7 +96,9 @@ export default function Home() {
 
   const [description, setDescription] = useState<string>(restored?.description ?? "");
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>(restored?.lineItems ?? []);
-  const [settings, setSettings] = useState<QuoteSettings>(restored?.settings ?? DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<QuoteSettings>(
+    restored?.settings ? normalizeSettings(restored.settings) : DEFAULT_SETTINGS,
+  );
   const [businessName, setBusinessName] = useState<string>(restored?.businessName ?? "");
   const [hasParsed, setHasParsed] = useState<boolean>(restored?.hasParsed ?? false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -307,7 +309,7 @@ export default function Home() {
   useEffect(() => {
     if (templateLoaded && loadedTemplate && !hasParsed) {
       setLineItems(loadedTemplate.lineItems);
-      setSettings(loadedTemplate.settings);
+      setSettings(normalizeSettings(loadedTemplate.settings));
       setBusinessName(loadedTemplate.businessDescription);
       setDescription(loadedTemplate.businessDescription);
       setHasParsed(true);
@@ -395,7 +397,7 @@ export default function Home() {
               (it) => prevLabels.has(it.id) && prevLabels.get(it.id) !== it.label,
             );
             setLineItems(data.lineItems);
-            setSettings(data.settings);
+            setSettings(normalizeSettings(data.settings));
             toast.success(data.message);
             if (renamed.length === 1) {
               speakPhrase(`Item renamed to ${renamed[0].label}`);
@@ -567,7 +569,7 @@ export default function Home() {
         stopProcessing();
         invalidateBilling();
         setLineItems(data.lineItems);
-        setSettings(data.settings);
+        setSettings(normalizeSettings(data.settings));
         if (data.businessName) {
           setBusinessName(data.businessName);
         }

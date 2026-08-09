@@ -48,7 +48,7 @@ Rules:
 - For each line item provide: id (uuid-style string), label (short name), unit (hour/meter/each/kg/litre/etc), unitPrice (number), quantity (default 1), voiceKey (a natural spoken keyword or phrase to identify this item, e.g. "labour hours", "pipe length", "call out")
 - For Australian businesses, default includeGst to true, gstRate to 0.10
 - Set callOutFee if mentioned, else 0
-- Set publicHolidaySurchargePercent if mentioned, else 0
+- Set publicHolidaySurchargePercent if mentioned, else 0. It is a WHOLE-NUMBER percent: "30% surcharge" → 30, NEVER 0.3
 - isPublicHoliday and hasCallOut default to false
 - Extract business name if mentioned
 - Always output valid JSON only, no markdown
@@ -121,6 +121,12 @@ Output this exact JSON structure:
   if (raw?.settings && typeof raw.settings === "object") {
     if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
       raw.settings.surchargeLabel = "Public Holiday";
+    }
+    // Surcharge percent is a whole number (30 = 30%). Treat fractional values
+    // (the model occasionally emits 0.3 for 30%) as fractions and scale up.
+    const pct = Number(raw.settings.publicHolidaySurchargePercent);
+    if (Number.isFinite(pct) && pct > 0 && pct < 1) {
+      raw.settings.publicHolidaySurchargePercent = Math.round(pct * 10000) / 100;
     }
   }
 

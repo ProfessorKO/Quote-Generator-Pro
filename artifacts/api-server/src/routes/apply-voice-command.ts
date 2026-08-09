@@ -77,7 +77,7 @@ You can:
 - Remove a line item
 - Toggle GST on/off (settings.includeGst) — GST rate is always 0.10
 - Turn the call-out fee on/off (settings.hasCallOut) and set its amount (settings.callOutFee)
-- Turn the public holiday surcharge on/off (settings.isPublicHoliday) and set its percent (settings.publicHolidaySurchargePercent)
+- Turn the public holiday surcharge on/off (settings.isPublicHoliday) and set its percent (settings.publicHolidaySurchargePercent). The percent is a WHOLE NUMBER: "30% surcharge" → 30, NEVER 0.3
 
 Rules:
 - Preserve every existing line item id unless the item is removed
@@ -175,6 +175,15 @@ Output this exact JSON structure:
       raw.settings.publicHolidaySurchargePercent,
       0,
     );
+    // Surcharge percent is a whole number (30 = 30%). Treat fractional values
+    // (the model occasionally emits 0.3 for 30%) as fractions and scale up.
+    if (
+      raw.settings.publicHolidaySurchargePercent > 0 &&
+      raw.settings.publicHolidaySurchargePercent < 1
+    ) {
+      raw.settings.publicHolidaySurchargePercent =
+        Math.round(raw.settings.publicHolidaySurchargePercent * 10000) / 100;
+    }
     // Preserve the user's custom surcharge label; the model doesn't manage it.
     if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
       raw.settings.surchargeLabel = (settings as any)?.surchargeLabel ?? "Public Holiday";

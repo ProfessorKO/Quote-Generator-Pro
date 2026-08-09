@@ -5,13 +5,27 @@ import type {
 } from "@workspace/api-client-react";
 import type { QuoteTotals } from "./pdf";
 
+/**
+ * Legacy saved data (older templates, quote history, drafts) stored the
+ * surcharge as a fraction (0.3 meaning 30%). Current data stores a whole
+ * percent (30). Any value between 0 and 1 is treated as a legacy fraction.
+ */
+export function normalizeSettings(s: QuoteSettings): QuoteSettings {
+  const pct = s.publicHolidaySurchargePercent;
+  if (pct > 0 && pct < 1) {
+    return { ...s, publicHolidaySurchargePercent: Math.round(pct * 10000) / 100 };
+  }
+  return s;
+}
+
 export const effectiveRate = (item: QuoteLineItem) =>
   item.unitPrice * (1 + (item.overtimePercent ?? 0) / 100);
 
 export function computeTotals(
   lineItems: QuoteLineItem[],
-  settings: QuoteSettings,
+  rawSettings: QuoteSettings,
 ): QuoteTotals {
+  const settings = normalizeSettings(rawSettings);
   let subtotal = 0;
   lineItems.forEach((item) => {
     subtotal += effectiveRate(item) * item.quantity;
@@ -41,7 +55,9 @@ export function buildQuoteRecord(params: {
   source: "save" | "download" | "email";
   client?: ClientDetails;
 }): QuoteRecordInput {
-  const { label, lineItems, settings, source, client } = params;
+  const { label, lineItems, source, client } = params;
+  // Persist normalized settings so a legacy fraction can never be written back.
+  const settings = normalizeSettings(params.settings);
   const totals = computeTotals(lineItems, settings);
   return {
     label: label.trim() || "Untitled quote",

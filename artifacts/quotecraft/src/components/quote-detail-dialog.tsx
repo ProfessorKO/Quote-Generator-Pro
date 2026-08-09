@@ -7,7 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import type { QuoteRecord, EmailRecord } from "@workspace/api-client-react";
-import { computeTotals, effectiveRate } from "@/lib/quote-record";
+import { computeTotals, effectiveRate, normalizeSettings } from "@/lib/quote-record";
 import { formatCurrency } from "@/lib/format";
 
 const sourceLabel: Record<string, string> = {
@@ -34,7 +34,7 @@ export function QuoteDetailDialog({
 }) {
   if (!quote) return null;
   const totals = computeTotals(quote.lineItems, quote.settings);
-  const s = quote.settings;
+  const s = normalizeSettings(quote.settings);
 
   return (
     <Dialog open={!!quote} onOpenChange={onOpenChange}>
