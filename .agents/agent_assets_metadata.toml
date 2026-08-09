@@ -19,3 +19,73 @@ uri = "file://artifacts/marketing-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music"
 description = "Generated music: Epic cinematic action-movie trailer instrumental with a playful parody edge scoring a superhero comedy ad. Driving orchestral percussion, brass hits, tense strings, 120 BPM, confiden…"
+
+[[outputs]]
+id = "5nr2INcWtO5IC6QawY3U1"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s1_pm.mp3"
+type = "audio"
+title = "s1_pm"
+description = "Text-to-speech audio: GET SPIDER MATE IN HERE! NOW!"
+
+[[outputs]]
+id = "vxUxV7fKXNVZ-Rne8X6eU"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s7_sm.mp3"
+type = "audio"
+title = "s7_sm"
+description = "Text-to-speech audio: Another day, another quote."
+
+[[outputs]]
+id = "-d2pWnUTRgJiwZTwhi9MI"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s2_sm.mp3"
+type = "audio"
+title = "s2_sm"
+description = "Text-to-speech audio: On it. Quote'll be in your inbox in ten seconds."
+
+[[outputs]]
+id = "q45961R1L59dTQAkwKQP4"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s5_dm.mp3"
+type = "audio"
+title = "s5_dm"
+description = "Text-to-speech audio: Prime Minister! The quote just came in. It's going to be three point five million dollars!"
+
+[[outputs]]
+id = "eSF3wQDkOS4oYNmj4-CHf"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s6_pm.mp3"
+type = "audio"
+title = "s6_pm"
+description = "Text-to-speech audio: Fine. As long as he gets the job done."
+
+[[outputs]]
+id = "GAe98Y1skghlwyBt32U0Z"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s4_sm.mp3"
+type = "audio"
+title = "s4_sm"
+description = "Text-to-speech audio: Quote sent. Gotta love Quote Mate."
+
+[[outputs]]
+id = "Wh8mwpChAf6BplS6iLV9D"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s8_vo.mp3"
+type = "audio"
+title = "s8_vo"
+description = "Text-to-speech audio: Quote Mate. Try it free today. Link in bio."
+
+[[outputs]]
+id = "5_uLJQ-K_LzYn7RTiG2UG"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s2_dm.mp3"
+type = "audio"
+title = "s2_dm"
+description = "Text-to-speech audio: Evacuate everyone from inside and surrounding the Opera House. Bring the target back to me alive. And stop the bomb from going off."
+
+[[outputs]]
+id = "AkqWIAoflmqdz3qyngia8"
+uri = "file://artifacts/marketing-video/public/audio/dialogue/s3_sm.mp3"
+type = "audio"
+title = "s3_sm"
+description = "Text-to-speech audio: Evacuate Opera House: one million dollars. Bring target back alive: two million. Stop the bomb: five hundred thousand. Call-out fee: fifty thousand. Emergency surcharge: thirty …"
+
+[[outputs]]
+id = "2g7ag9Ji6cdKKHgiNk4Om"
+uri = "file://artifacts/marketing-video/public/audio/bg_music_2.mp3"
+type = "audio"
+title = "action trailer bed 66s"
+description = "Generated music: Epic cinematic action-movie trailer instrumental, orchestral with driving percussion and brass hits, tense build-ups and a triumphant heroic finish, 120 BPM, no vocals, suitable as b…"

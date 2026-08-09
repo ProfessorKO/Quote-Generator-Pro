@@ -21,7 +21,7 @@ export const Scene2 = () => {
           muted
           loop
           playsInline
-          src={`${import.meta.env.BASE_URL}videos/scene2_defense.mp4`}
+          src={`${import.meta.env.BASE_URL}videos/scene2_defense_v2.mp4`}
           className="absolute inset-0 w-full h-full object-cover origin-top-left"
           style={{ transform: 'scale(1.1)' }}
         />
@@ -59,7 +59,7 @@ export const Scene2 = () => {
           muted
           loop
           playsInline
-          src={`${import.meta.env.BASE_URL}videos/scene2_spidermate.mp4`}
+          src={`${import.meta.env.BASE_URL}videos/scene2_spidermate_v2.mp4`}
           className="absolute inset-0 w-full h-full object-cover"
           initial={{ scale: 1.3, x: 20 }}
           animate={{ scale: 1, x: 0 }}

@@ -14,7 +14,7 @@ export const Scene6 = () => {
         muted
         loop
         playsInline
-        src={`${import.meta.env.BASE_URL}videos/scene6.mp4`}
+        src={`${import.meta.env.BASE_URL}videos/scene6_v2.mp4`}
         className="absolute inset-0 w-full h-full object-cover"
         initial={{ scale: 1.1 }}
         animate={{ scale: 1.0 }}
