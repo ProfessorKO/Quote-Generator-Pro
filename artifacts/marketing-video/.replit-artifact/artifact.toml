@@ -1,0 +1,28 @@
+kind = "video"
+previewPath = "/marketing-video/"
+title = "Spider Mate — Quote Mate Ad"
+description = "A ~60-second vertical (9:16) animated marketing video for Quote Mate: an action-movie parody where tradie superhero Spider Mate saves the Sydney Opera House and quotes the job with Quote Mate. For TikTok and YouTube Shorts."
+version = "1.0.0"
+id = "artifacts/marketing-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/marketing-video/" ]
+localPort = 18472
+
+[services.development]
+run = "pnpm --filter @workspace/marketing-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/marketing-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/marketing-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18472"
+BASE_PATH = "/marketing-video/"

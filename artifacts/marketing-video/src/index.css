@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Anton', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  
+  --color-brand-navy: #1B2C4D;
+  --color-brand-orange: #F2930D;
+  --color-brand-navy-light: #2A406B;
+  
+  --color-background: #0F172A;
+  --color-foreground: #F8FAFC;
+}
+
+@layer base {
+  :root {
+    --brand-navy: 219 48% 20%;
+    --brand-orange: 35 91% 50%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body overflow-hidden;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.split-diagonal-left {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.split-diagonal-right {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.text-stroke {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+}
+
+.text-shadow-hard {
+  text-shadow: 4px 4px 0px rgba(0,0,0,1);
+}
