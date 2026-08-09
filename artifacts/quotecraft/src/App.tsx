@@ -23,6 +23,7 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import { ContactWidget } from "@/components/contact-widget";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useGetBusinessProfile, getGetBusinessProfileQueryKey } from "@workspace/api-client-react";
@@ -328,6 +329,7 @@ function ClerkProviderWithRoutes() {
             </Switch>
           </Suspense>
           <Toaster position="top-center" theme="light" />
+          <ContactWidget />
         </TooltipProvider>
       </QueryClientProvider>
     </ClerkProvider>
