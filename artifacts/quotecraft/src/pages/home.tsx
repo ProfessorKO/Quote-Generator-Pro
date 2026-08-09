@@ -92,7 +92,6 @@ export default function Home() {
     isPublicHoliday: false,
     hasCallOut: false,
     surchargeLabel: "Public Holiday",
-    overtimeLabel: "Overtime",
   };
 
   const [description, setDescription] = useState<string>(restored?.description ?? "");
@@ -818,7 +817,7 @@ export default function Home() {
                   <h3 className="font-bold text-lg text-primary tracking-tight">Line Items</h3>
                   <Button variant="ghost" size="sm" onClick={() => {
                     const id = Math.random().toString(36).substr(2, 9);
-                    setLineItems([...lineItems, { id, label: "New Item", unit: "ea", unitPrice: 0, quantity: 1, voiceKey: "new item", overtimePercent: 0 }]);
+                    setLineItems([...lineItems, { id, label: "New Item", unit: "ea", unitPrice: 0, quantity: 1, voiceKey: "new item", overtimePercent: 0, overtimeLabel: "Overtime" }]);
                   }}>
                     <Plus className="w-4 h-4 mr-1" /> Add
                   </Button>
@@ -866,8 +865,8 @@ export default function Home() {
                         <div className="space-y-1.5 flex-1">
                           <div className="flex items-center gap-1">
                             <Input
-                              value={settings.overtimeLabel ?? "Overtime"}
-                              onChange={(e) => setSettings({ ...settings, overtimeLabel: e.target.value })}
+                              value={item.overtimeLabel ?? "Overtime"}
+                              onChange={(e) => setLineItems(items => items.map(it => it.id === item.id ? { ...it, overtimeLabel: e.target.value } : it))}
                               placeholder="Overtime"
                               aria-label="Overtime label"
                               className="h-6 px-1.5 text-xs text-muted-foreground border-dashed"
@@ -884,7 +883,7 @@ export default function Home() {
 
                       {(item.overtimePercent ?? 0) > 0 && (
                         <div className="flex items-center justify-between rounded-md bg-accent/10 px-3 py-2 text-xs">
-                          <span className="text-muted-foreground">Base ${item.unitPrice.toFixed(2)} + {item.overtimePercent}% {(settings.overtimeLabel?.trim() || "Overtime").toLowerCase()}</span>
+                          <span className="text-muted-foreground">Base ${item.unitPrice.toFixed(2)} + {item.overtimePercent}% {(item.overtimeLabel?.trim() || "Overtime").toLowerCase()}</span>
                           <span className="font-mono font-semibold text-primary">${effectiveRate(item).toFixed(2)}/{item.unit}</span>
                         </div>
                       )}

@@ -147,6 +147,12 @@ export function buildPdf(params: {
     if (raw.length > MAX_DESCRIPTION_CHARS) {
       raw = `${raw.slice(0, MAX_DESCRIPTION_CHARS)}...`;
     }
+    // Show the overtime/surcharge breakdown in the description, matching the
+    // builder card: "<label> — Base $X.XX + N% <overtime label>".
+    if ((item.overtimePercent ?? 0) > 0) {
+      const otLabel = (item.overtimeLabel?.trim() || "Overtime").toLowerCase();
+      raw += ` — Base ${money(item.unitPrice)} + ${item.overtimePercent}% ${otLabel}`;
+    }
     const lines: string[] = doc.splitTextToSize(raw, colQty - marginX - 16);
     const rowHeight = Math.max(20, (lines.length - 1) * LINE_HEIGHT + 20);
 

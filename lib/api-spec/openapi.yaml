@@ -985,6 +985,11 @@ components:
             Overtime markup percentage applied on top of the base unitPrice.
             Effective rate = unitPrice + (unitPrice * overtimePercent / 100).
             0 or absent means no overtime.
+        overtimeLabel:
+          type: string
+          description: >-
+            Editable per-line-item label for the overtime % markup
+            (default: Overtime).
       required:
         - id
         - label
@@ -1011,9 +1016,6 @@ components:
         surchargeLabel:
           type: string
           description: "Editable label for the % surcharge toggle (default: Public Holiday)"
-        overtimeLabel:
-          type: string
-          description: "Editable label for the per-line-item overtime % field (default: Overtime)"
       required:
         - includeGst
         - gstRate

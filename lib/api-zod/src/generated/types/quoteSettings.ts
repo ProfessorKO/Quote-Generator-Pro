@@ -15,6 +15,4 @@ export interface QuoteSettings {
   hasCallOut: boolean;
   /** Editable label for the % surcharge toggle (default: Public Holiday) */
   surchargeLabel?: string;
-  /** Editable label for the per-line-item overtime % field (default: Overtime) */
-  overtimeLabel?: string;
 }

@@ -32,7 +32,8 @@ export const ListTemplatesResponseItem = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -41,8 +42,7 @@ export const ListTemplatesResponseItem = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -64,7 +64,8 @@ export const CreateTemplateBody = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -73,8 +74,7 @@ export const CreateTemplateBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -98,7 +98,8 @@ export const GetTemplateResponse = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -107,8 +108,7 @@ export const GetTemplateResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -133,7 +133,8 @@ export const UpdateTemplateBody = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -142,8 +143,7 @@ export const UpdateTemplateBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -159,7 +159,8 @@ export const UpdateTemplateResponse = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -168,8 +169,7 @@ export const UpdateTemplateResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -201,7 +201,8 @@ export const ParseQuoteDescriptionResponse = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -210,8 +211,7 @@ export const ParseQuoteDescriptionResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -229,7 +229,8 @@ export const ApplyVoiceCommandBody = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -238,8 +239,7 @@ export const ApplyVoiceCommandBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -252,7 +252,8 @@ export const ApplyVoiceCommandResponse = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -261,8 +262,7 @@ export const ApplyVoiceCommandResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "message": zod.string().describe('Short human-readable summary of what changed'),
   "understood": zod.boolean().describe('Whether the command was understood and applied')
@@ -420,7 +420,8 @@ export const ListQuotesResponseItem = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -429,8 +430,7 @@ export const ListQuotesResponseItem = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -457,7 +457,8 @@ export const CreateQuoteBody = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -466,8 +467,7 @@ export const CreateQuoteBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')
@@ -506,7 +506,8 @@ export const GetQuoteResponse = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -515,8 +516,7 @@ export const GetQuoteResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -597,7 +597,8 @@ export const SendQuoteEmailBody = zod.object({
   "unitPrice": zod.number(),
   "quantity": zod.number(),
   "voiceKey": zod.string().describe('Voice command keyword to set this field quantity'),
-  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.')
+  "overtimePercent": zod.number().optional().describe('Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice \* overtimePercent \/ 100). 0 or absent means no overtime.'),
+  "overtimeLabel": zod.string().optional().describe('Editable per-line-item label for the overtime % markup (default: Overtime).')
 })),
   "settings": zod.object({
   "includeGst": zod.boolean(),
@@ -606,8 +607,7 @@ export const SendQuoteEmailBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
-  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')

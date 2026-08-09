@@ -94,6 +94,7 @@ export function TemplateEditDialog({
         quantity: 1,
         voiceKey: "new item",
         overtimePercent: 0,
+        overtimeLabel: "Overtime",
       },
     ]);
   };
@@ -209,9 +210,15 @@ export function TemplateEditDialog({
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-1">
                       <Input
-                        value={settings.overtimeLabel ?? "Overtime"}
+                        value={item.overtimeLabel ?? "Overtime"}
                         onChange={(e) =>
-                          setSettings({ ...settings, overtimeLabel: e.target.value })
+                          setLineItems((items) =>
+                            items.map((it) =>
+                              it.id === item.id
+                                ? { ...it, overtimeLabel: e.target.value }
+                                : it,
+                            ),
+                          )
                         }
                         placeholder="Overtime"
                         aria-label="Overtime label"

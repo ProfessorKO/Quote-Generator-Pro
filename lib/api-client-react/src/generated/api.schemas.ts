@@ -199,6 +199,8 @@ export interface QuoteLineItem {
   voiceKey: string;
   /** Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice * overtimePercent / 100). 0 or absent means no overtime. */
   overtimePercent?: number;
+  /** Editable per-line-item label for the overtime % markup (default: Overtime). */
+  overtimeLabel?: string;
 }
 
 export interface QuoteSettings {
@@ -210,8 +212,6 @@ export interface QuoteSettings {
   hasCallOut: boolean;
   /** Editable label for the % surcharge toggle (default: Public Holiday) */
   surchargeLabel?: string;
-  /** Editable label for the per-line-item overtime % field (default: Overtime) */
-  overtimeLabel?: string;
 }
 
 export interface QuoteTemplate {

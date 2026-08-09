@@ -108,6 +108,10 @@ Output this exact JSON structure:
       overtimePercent: Number.isFinite(Number(item.overtimePercent)) && Number(item.overtimePercent) >= 0
         ? Number(item.overtimePercent)
         : 0,
+      overtimeLabel:
+        typeof item.overtimeLabel === "string" && item.overtimeLabel.trim()
+          ? item.overtimeLabel
+          : "Overtime",
       description: item.description ?? null,
     }));
   }
@@ -117,9 +121,6 @@ Output this exact JSON structure:
   if (raw?.settings && typeof raw.settings === "object") {
     if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
       raw.settings.surchargeLabel = "Public Holiday";
-    }
-    if (typeof raw.settings.overtimeLabel !== "string" || !raw.settings.overtimeLabel.trim()) {
-      raw.settings.overtimeLabel = "Overtime";
     }
   }
 
@@ -138,7 +139,6 @@ Output this exact JSON structure:
         isPublicHoliday: false,
         hasCallOut: false,
         surchargeLabel: "Public Holiday",
-        overtimeLabel: "Overtime",
         ...raw?.settings,
       },
     });

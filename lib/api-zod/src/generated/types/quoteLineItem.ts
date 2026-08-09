@@ -18,4 +18,6 @@ export interface QuoteLineItem {
   voiceKey: string;
   /** Overtime markup percentage applied on top of the base unitPrice. Effective rate = unitPrice + (unitPrice * overtimePercent / 100). 0 or absent means no overtime. */
   overtimePercent?: number;
+  /** Editable per-line-item label for the overtime % markup (default: Overtime). */
+  overtimeLabel?: string;
 }
