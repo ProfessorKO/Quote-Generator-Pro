@@ -96,13 +96,8 @@ export function ContactWidget() {
         <DialogHeader>
           <DialogTitle>Contact Us</DialogTitle>
           <DialogDescription>
-            Send us a message and we&apos;ll get back to you at{" "}
-            <a
-              href="mailto:support@workmatespro.com.au"
-              className="font-medium text-[#1B2C4D] underline underline-offset-2"
-            >
-              support@workmatespro.com.au
-            </a>
+            Send us a message — we&apos;ll do our best to get back to you
+            within 24 hours.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
