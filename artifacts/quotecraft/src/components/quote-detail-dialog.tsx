@@ -94,7 +94,7 @@ export function QuoteDetailDialog({
             )}
             {totals.surcharge > 0 && (
               <Row
-                label={`Surcharge (${s.publicHolidaySurchargePercent}%)`}
+                label={`${s.surchargeLabel?.trim() || "Public Holiday"} (${s.publicHolidaySurchargePercent}%)`}
                 value={formatCurrency(totals.surcharge)}
               />
             )}

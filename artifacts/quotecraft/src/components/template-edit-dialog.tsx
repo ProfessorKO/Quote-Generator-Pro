@@ -252,12 +252,27 @@ export function TemplateEditDialog({
                 className="h-9 font-mono"
               />
             )}
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Public holiday surcharge</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Input
+                value={settings.surchargeLabel ?? "Public Holiday"}
+                onChange={(e) =>
+                  setSettings({ ...settings, surchargeLabel: e.target.value })
+                }
+                placeholder="Public Holiday"
+                aria-label="Surcharge label"
+                className="h-9 text-sm flex-1 min-w-0"
+              />
               <Switch
                 checked={settings.isPublicHoliday}
                 onCheckedChange={(c) =>
-                  setSettings({ ...settings, isPublicHoliday: c })
+                  setSettings({
+                    ...settings,
+                    isPublicHoliday: c,
+                    publicHolidaySurchargePercent:
+                      c && !settings.publicHolidaySurchargePercent
+                        ? 30
+                        : settings.publicHolidaySurchargePercent,
+                  })
                 }
               />
             </div>

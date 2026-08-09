@@ -112,6 +112,14 @@ Output this exact JSON structure:
     }));
   }
 
+  // Normalize the surcharge label on every response, not just the fallback:
+  // the model omits this optional field, but new quotes should carry the default.
+  if (raw?.settings && typeof raw.settings === "object") {
+    if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
+      raw.settings.surchargeLabel = "Public Holiday";
+    }
+  }
+
   const validated = ParseQuoteDescriptionResponse.safeParse(raw);
   if (!validated.success) {
     req.log.warn({ errors: validated.error.message, raw }, "AI response did not match schema");
@@ -126,6 +134,7 @@ Output this exact JSON structure:
         publicHolidaySurchargePercent: raw?.settings?.publicHolidaySurchargePercent ?? 0,
         isPublicHoliday: false,
         hasCallOut: false,
+        surchargeLabel: "Public Holiday",
         ...raw?.settings,
       },
     });

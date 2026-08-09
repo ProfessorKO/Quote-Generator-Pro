@@ -203,7 +203,7 @@ export function buildPdf(params: {
   if (totals.callOut > 0) totalRow("Call-out fee", money(totals.callOut));
   if (totals.surcharge > 0)
     totalRow(
-      `Public holiday surcharge (${settings.publicHolidaySurchargePercent}%)`,
+      `${settings.surchargeLabel?.trim() || "Public Holiday"} (${settings.publicHolidaySurchargePercent}%)`,
       money(totals.surcharge),
     );
   if (settings.includeGst)

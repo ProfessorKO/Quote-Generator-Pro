@@ -1008,6 +1008,9 @@ components:
           type: boolean
         hasCallOut:
           type: boolean
+        surchargeLabel:
+          type: string
+          description: "Editable label for the % surcharge toggle (default: Public Holiday)"
       required:
         - includeGst
         - gstRate

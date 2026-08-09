@@ -40,7 +40,8 @@ export const ListTemplatesResponseItem = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -70,7 +71,8 @@ export const CreateTemplateBody = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -102,7 +104,8 @@ export const GetTemplateResponse = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -135,7 +138,8 @@ export const UpdateTemplateBody = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -159,7 +163,8 @@ export const UpdateTemplateResponse = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -199,7 +204,8 @@ export const ParseQuoteDescriptionResponse = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -225,7 +231,8 @@ export const ApplyVoiceCommandBody = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 })
 })
 
@@ -246,7 +253,8 @@ export const ApplyVoiceCommandResponse = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "message": zod.string().describe('Short human-readable summary of what changed'),
   "understood": zod.boolean().describe('Whether the command was understood and applied')
@@ -412,7 +420,8 @@ export const ListQuotesResponseItem = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -447,7 +456,8 @@ export const CreateQuoteBody = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')
@@ -494,7 +504,8 @@ export const GetQuoteResponse = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -583,7 +594,8 @@ export const SendQuoteEmailBody = zod.object({
   "callOutFee": zod.number(),
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
-  "hasCallOut": zod.boolean()
+  "hasCallOut": zod.boolean(),
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')

@@ -170,6 +170,10 @@ Output this exact JSON structure:
       raw.settings.publicHolidaySurchargePercent,
       0,
     );
+    // Preserve the user's custom surcharge label; the model doesn't manage it.
+    if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
+      raw.settings.surchargeLabel = (settings as any)?.surchargeLabel ?? "Public Holiday";
+    }
   }
 
   const validated = ApplyVoiceCommandResponse.safeParse(raw);

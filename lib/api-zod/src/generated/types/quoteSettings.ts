@@ -13,4 +13,6 @@ export interface QuoteSettings {
   publicHolidaySurchargePercent: number;
   isPublicHoliday: boolean;
   hasCallOut: boolean;
+  /** Editable label for the % surcharge toggle (default: Public Holiday) */
+  surchargeLabel?: string;
 }

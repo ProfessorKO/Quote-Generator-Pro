@@ -91,6 +91,7 @@ export default function Home() {
     publicHolidaySurchargePercent: 0,
     isPublicHoliday: false,
     hasCallOut: false,
+    surchargeLabel: "Public Holiday",
   };
 
   const [description, setDescription] = useState<string>(restored?.description ?? "");
@@ -918,14 +919,27 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between">
-                      <Label className="flex flex-col gap-1">
-                        <span className="font-medium text-sm">Public Holiday</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-1 flex-1 min-w-0">
+                        <Input
+                          value={settings.surchargeLabel ?? "Public Holiday"}
+                          onChange={(e) => setSettings({...settings, surchargeLabel: e.target.value})}
+                          placeholder="Public Holiday"
+                          aria-label="Surcharge label"
+                          className="font-medium text-sm h-9"
+                        />
                         <span className="text-xs text-muted-foreground">Applies % surcharge</span>
-                      </Label>
+                      </div>
                       <Switch 
                         checked={settings.isPublicHoliday} 
-                        onCheckedChange={(c) => setSettings({...settings, isPublicHoliday: c})} 
+                        onCheckedChange={(c) => setSettings({
+                          ...settings,
+                          isPublicHoliday: c,
+                          publicHolidaySurchargePercent:
+                            c && !settings.publicHolidaySurchargePercent
+                              ? 30
+                              : settings.publicHolidaySurchargePercent,
+                        })} 
                       />
                     </div>
 
@@ -964,7 +978,7 @@ export default function Home() {
                   )}
                   {settings.isPublicHoliday && (
                     <div className="flex justify-between text-accent">
-                      <span>Surcharge ({settings.publicHolidaySurchargePercent}%)</span>
+                      <span>{settings.surchargeLabel?.trim() || "Public Holiday"} ({settings.publicHolidaySurchargePercent}%)</span>
                       <span>${totals.surcharge.toFixed(2)}</span>
                     </div>
                   )}
