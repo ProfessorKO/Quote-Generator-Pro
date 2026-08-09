@@ -752,7 +752,7 @@ export default function Home() {
           <Label className="text-sm font-semibold text-primary">Describe your pricing</Label>
           <div className="relative">
             <Textarea 
-              placeholder="e.g. I'm a plumber. I charge $85/hour for labour and $12.50/m of pipe."
+              placeholder="e.g. I'm a plumber. I charge $85/hour for labour and $12.50/m of pipe. (You can even add things like &quot;hourly rate includes GST&quot; or &quot;take 10% off the total&quot;.)"
               className="min-h-[120px] resize-none pr-12 text-base"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -1068,7 +1068,7 @@ export default function Home() {
             <li>"Change quantity of pipes to 10"</li>
             <li>"Rename item 1 to brass fittings"</li>
             <li>"Remove the call-out fee"</li>
-            <li>"Make this quote GST inclusive"</li>
+            <li>"Make the hourly rate GST inclusive"</li>
             <li>"Add 15% overtime to labour"</li>
             <li>"Add a $80 call-out fee"</li>
             <li>"Apply public holiday surcharge"</li>

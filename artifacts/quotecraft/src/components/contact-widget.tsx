@@ -96,8 +96,8 @@ export function ContactWidget() {
         <DialogHeader>
           <DialogTitle>Contact Us</DialogTitle>
           <DialogDescription>
-            Send us a message — we&apos;ll do our best to get back to you
-            within 24 hours.
+            Drop us a line — we&apos;ll get back to you within 24 hours,
+            usually sooner.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
