@@ -41,7 +41,8 @@ export const ListTemplatesResponseItem = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -72,7 +73,8 @@ export const CreateTemplateBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 })
 })
 
@@ -105,7 +107,8 @@ export const GetTemplateResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -139,7 +142,8 @@ export const UpdateTemplateBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 })
 })
 
@@ -164,7 +168,8 @@ export const UpdateTemplateResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -205,7 +210,8 @@ export const ParseQuoteDescriptionResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 })
 })
 
@@ -232,7 +238,8 @@ export const ApplyVoiceCommandBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 })
 })
 
@@ -254,7 +261,8 @@ export const ApplyVoiceCommandResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "message": zod.string().describe('Short human-readable summary of what changed'),
   "understood": zod.boolean().describe('Whether the command was understood and applied')
@@ -421,7 +429,8 @@ export const ListQuotesResponseItem = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -457,7 +466,8 @@ export const CreateQuoteBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')
@@ -505,7 +515,8 @@ export const GetQuoteResponse = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "total": zod.number(),
   "source": zod.string(),
@@ -595,7 +606,8 @@ export const SendQuoteEmailBody = zod.object({
   "publicHolidaySurchargePercent": zod.number(),
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
-  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
+  "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)'),
+  "overtimeLabel": zod.string().optional().describe('Editable label for the per-line-item overtime % field (default: Overtime)')
 }),
   "total": zod.number(),
   "source": zod.string().describe('One of save, download, email')

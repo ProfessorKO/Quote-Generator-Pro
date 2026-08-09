@@ -118,6 +118,9 @@ Output this exact JSON structure:
     if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
       raw.settings.surchargeLabel = "Public Holiday";
     }
+    if (typeof raw.settings.overtimeLabel !== "string" || !raw.settings.overtimeLabel.trim()) {
+      raw.settings.overtimeLabel = "Overtime";
+    }
   }
 
   const validated = ParseQuoteDescriptionResponse.safeParse(raw);
@@ -135,6 +138,7 @@ Output this exact JSON structure:
         isPublicHoliday: false,
         hasCallOut: false,
         surchargeLabel: "Public Holiday",
+        overtimeLabel: "Overtime",
         ...raw?.settings,
       },
     });

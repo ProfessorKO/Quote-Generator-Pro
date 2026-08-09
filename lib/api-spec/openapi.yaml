@@ -1011,6 +1011,9 @@ components:
         surchargeLabel:
           type: string
           description: "Editable label for the % surcharge toggle (default: Public Holiday)"
+        overtimeLabel:
+          type: string
+          description: "Editable label for the per-line-item overtime % field (default: Overtime)"
       required:
         - includeGst
         - gstRate

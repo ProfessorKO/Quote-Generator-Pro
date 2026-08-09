@@ -207,9 +207,18 @@ export function TemplateEditDialog({
                     />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">
-                      OT (%)
-                    </Label>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={settings.overtimeLabel ?? "Overtime"}
+                        onChange={(e) =>
+                          setSettings({ ...settings, overtimeLabel: e.target.value })
+                        }
+                        placeholder="Overtime"
+                        aria-label="Overtime label"
+                        className="h-6 px-1 text-[11px] text-muted-foreground border-dashed"
+                      />
+                      <span className="text-[11px] text-muted-foreground shrink-0">(%)</span>
+                    </div>
                     <NumericInput
                       value={item.overtimePercent ?? 0}
                       onValueChange={(v) =>

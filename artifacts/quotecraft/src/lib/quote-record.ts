@@ -17,8 +17,9 @@ export function computeTotals(
     subtotal += effectiveRate(item) * item.quantity;
   });
   const callOut = settings.hasCallOut ? settings.callOutFee : 0;
+  // Surcharge applies to subtotal + call-out fee (the call-out is surchargeable work).
   const surcharge = settings.isPublicHoliday
-    ? subtotal * (settings.publicHolidaySurchargePercent / 100)
+    ? (subtotal + callOut) * (settings.publicHolidaySurchargePercent / 100)
     : 0;
   const taxableAmount = subtotal + callOut + surcharge;
   const gst = settings.includeGst ? taxableAmount * settings.gstRate : 0;

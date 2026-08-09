@@ -92,6 +92,7 @@ export default function Home() {
     isPublicHoliday: false,
     hasCallOut: false,
     surchargeLabel: "Public Holiday",
+    overtimeLabel: "Overtime",
   };
 
   const [description, setDescription] = useState<string>(restored?.description ?? "");
@@ -621,7 +622,8 @@ export default function Home() {
     });
 
     const callOut = settings.hasCallOut ? settings.callOutFee : 0;
-    const surcharge = settings.isPublicHoliday ? (subtotal * (settings.publicHolidaySurchargePercent / 100)) : 0;
+    // Surcharge applies to subtotal + call-out fee.
+    const surcharge = settings.isPublicHoliday ? ((subtotal + callOut) * (settings.publicHolidaySurchargePercent / 100)) : 0;
     
     const taxableAmount = subtotal + callOut + surcharge;
     const gst = settings.includeGst ? (taxableAmount * settings.gstRate) : 0;
@@ -862,7 +864,16 @@ export default function Home() {
                           />
                         </div>
                         <div className="space-y-1.5 flex-1">
-                          <Label className="text-xs text-muted-foreground">Overtime (%)</Label>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              value={settings.overtimeLabel ?? "Overtime"}
+                              onChange={(e) => setSettings({ ...settings, overtimeLabel: e.target.value })}
+                              placeholder="Overtime"
+                              aria-label="Overtime label"
+                              className="h-6 px-1.5 text-xs text-muted-foreground border-dashed"
+                            />
+                            <span className="text-xs text-muted-foreground shrink-0">(%)</span>
+                          </div>
                           <NumericInput
                             value={item.overtimePercent ?? 0}
                             onValueChange={(v) => handleUpdateItem(item.id, "overtimePercent", v)}
@@ -873,7 +884,7 @@ export default function Home() {
 
                       {(item.overtimePercent ?? 0) > 0 && (
                         <div className="flex items-center justify-between rounded-md bg-accent/10 px-3 py-2 text-xs">
-                          <span className="text-muted-foreground">Base ${item.unitPrice.toFixed(2)} + {item.overtimePercent}% overtime</span>
+                          <span className="text-muted-foreground">Base ${item.unitPrice.toFixed(2)} + {item.overtimePercent}% {(settings.overtimeLabel?.trim() || "Overtime").toLowerCase()}</span>
                           <span className="font-mono font-semibold text-primary">${effectiveRate(item).toFixed(2)}/{item.unit}</span>
                         </div>
                       )}

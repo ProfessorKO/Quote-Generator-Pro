@@ -174,6 +174,10 @@ Output this exact JSON structure:
     if (typeof raw.settings.surchargeLabel !== "string" || !raw.settings.surchargeLabel.trim()) {
       raw.settings.surchargeLabel = (settings as any)?.surchargeLabel ?? "Public Holiday";
     }
+    // Preserve the user's custom overtime label the same way.
+    if (typeof raw.settings.overtimeLabel !== "string" || !raw.settings.overtimeLabel.trim()) {
+      raw.settings.overtimeLabel = (settings as any)?.overtimeLabel ?? "Overtime";
+    }
   }
 
   const validated = ApplyVoiceCommandResponse.safeParse(raw);
