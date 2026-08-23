@@ -119,29 +119,34 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
- * All dates/times in the app are displayed in Australian Eastern Time
- * (Australia/Sydney — the same zone the billing day/month boundaries use),
- * regardless of the viewer's device timezone. Always use these helpers
- * instead of date-fns format / toLocaleDateString, which silently render in
- * the device's local zone.
+ * Shared date/time display helpers. Australian formatting (day-month order,
+ * en-AU) rendered in the VIEWER'S DEVICE TIMEZONE — owner's explicit choice
+ * (Aug 2026): each user sees times in their own local zone. Do not pin these
+ * to a fixed timeZone. The one exception is the admin screen, which pins to
+ * Australian Eastern Time via formatDateTimeAEST below.
  */
-const AU_TIMEZONE = "Australia/Sydney";
-
 const AU_DATE = new Intl.DateTimeFormat("en-AU", {
-  timeZone: AU_TIMEZONE,
   day: "numeric",
   month: "short",
   year: "numeric",
 });
 
 const AU_DATE_SHORT = new Intl.DateTimeFormat("en-AU", {
-  timeZone: AU_TIMEZONE,
   day: "numeric",
   month: "short",
 });
 
 const AU_DATETIME = new Intl.DateTimeFormat("en-AU", {
-  timeZone: AU_TIMEZONE,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+const AEST_DATETIME = new Intl.DateTimeFormat("en-AU", {
+  timeZone: "Australia/Sydney",
   day: "numeric",
   month: "short",
   year: "numeric",
@@ -158,20 +163,29 @@ function toValidDate(value: DateInput): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** e.g. "23 Aug 2026" (Australian Eastern Time). */
+/** e.g. "23 Aug 2026" (viewer's local timezone). */
 export function formatDateAU(value: DateInput): string {
   const d = toValidDate(value);
   return d ? AU_DATE.format(d) : "—";
 }
 
-/** e.g. "23 Aug" (Australian Eastern Time). */
+/** e.g. "23 Aug" (viewer's local timezone). */
 export function formatDateShortAU(value: DateInput): string {
   const d = toValidDate(value);
   return d ? AU_DATE_SHORT.format(d) : "—";
 }
 
-/** e.g. "23 Aug 2026, 9:15 pm" (Australian Eastern Time). */
+/** e.g. "23 Aug 2026, 9:15 pm" (viewer's local timezone). */
 export function formatDateTimeAU(value: DateInput): string {
   const d = toValidDate(value);
   return d ? AU_DATETIME.format(d) : "—";
+}
+
+/**
+ * e.g. "23 Aug 2026, 9:15 pm" pinned to Australian Eastern Time regardless of
+ * device timezone. Admin screen only — it has always displayed AEST.
+ */
+export function formatDateTimeAEST(value: DateInput): string {
+  const d = toValidDate(value);
+  return d ? AEST_DATETIME.format(d) : "—";
 }

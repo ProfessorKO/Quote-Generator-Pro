@@ -22,12 +22,12 @@ import {
   getListAdminUsersQueryKey,
 } from "@workspace/api-client-react";
 
-import { formatDateTimeAU } from "@/lib/format";
+import { formatDateTimeAEST } from "@/lib/format";
 
 // Kept as a local alias — all display formatting now goes through the shared
-// Australian-time helpers in @/lib/format.
+// Admin screen pins to Australian Eastern Time (pre-existing behavior).
 function formatAest(value: string | null): string {
-  return formatDateTimeAU(value);
+  return formatDateTimeAEST(value);
 }
 
 function signupLabel(method: string | null): string {
