@@ -10,6 +10,12 @@ import {
 } from "../lib/billing";
 import { upsertCurrentUser } from "../lib/user-sync";
 import { anonAiRateLimiter } from "../lib/anonRateLimit";
+import {
+  anonDailyKey,
+  reserveAnonDaily,
+  releaseAnonDaily,
+  anonLimitResponse,
+} from "../lib/anonDailyLimit";
 
 const router: IRouter = Router();
 
@@ -26,6 +32,19 @@ router.post("/apply-voice-command", optionalAuth, anonAiRateLimiter, async (req,
   // Cheap pre-check here rejects users already at their limit before we spend
   // an AI call; the actual consumption happens after a successful apply.
   const userId = (req as AuthedRequest).userId as string | undefined;
+  // Signed-out visitors share a 3-per-day budget across quote generations and
+  // voice edits. A slot is reserved ATOMICALLY before the AI call (parallel
+  // requests can't over-claim) and released on every path where the command
+  // was not successfully applied — only understood edits stay billed, the
+  // same rule as signed-in metering below.
+  let anonKey: string | null = null;
+  if (!userId) {
+    anonKey = anonDailyKey(req, parsed.data.visitorId);
+    if (!(await reserveAnonDaily(anonKey))) {
+      res.status(429).json(anonLimitResponse());
+      return;
+    }
+  }
   if (userId) {
     await upsertCurrentUser(userId);
     const billing = await getBillingStatus(userId);
@@ -111,6 +130,7 @@ Output this exact JSON structure:
     content = response.choices[0]?.message?.content ?? "{}";
   } catch (err) {
     req.log.error({ err }, "OpenAI request failed for voice command");
+    if (anonKey) await releaseAnonDaily(anonKey);
     res.json({
       lineItems,
       settings,
@@ -125,6 +145,7 @@ Output this exact JSON structure:
     result = JSON.parse(content);
   } catch {
     req.log.error({ content }, "Failed to parse OpenAI JSON response");
+    if (anonKey) await releaseAnonDaily(anonKey);
     res.json({
       lineItems,
       settings,
@@ -193,6 +214,7 @@ Output this exact JSON structure:
   const validated = ApplyVoiceCommandResponse.safeParse(raw);
   if (!validated.success) {
     req.log.warn({ errors: validated.error.message, raw }, "AI voice command response did not match schema");
+    if (anonKey) await releaseAnonDaily(anonKey);
     // Fall back to returning the original quote unchanged
     res.json({
       lineItems,
@@ -217,6 +239,12 @@ Output this exact JSON structure:
       }
       throw err;
     }
+  }
+
+  // Anonymous daily budget: "couldn't understand" replies are free retries,
+  // so the up-front reservation is handed back.
+  if (anonKey && !validated.data.understood) {
+    await releaseAnonDaily(anonKey);
   }
 
   res.json(validated.data);

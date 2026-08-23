@@ -23,6 +23,13 @@ export interface AnonRateLimitOptions {
   max: number;
   /** Window length in milliseconds. */
   windowMs: number;
+  /**
+   * When false, authenticated users are ALSO limited (bucketed per user id
+   * instead of per IP). Use for endpoints with no billing-layer metering,
+   * e.g. analytics events, where any account could otherwise write
+   * unbounded rows. Defaults to true (AI endpoints: billing meters users).
+   */
+  exemptAuthenticated?: boolean;
 }
 
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
@@ -38,13 +45,15 @@ export function createAnonRateLimiter(options: AnonRateLimitOptions): RequestHan
   /** Test hook: clear all counters. */
   reset: () => void;
 } {
-  const { max, windowMs } = options;
+  const { max, windowMs, exemptAuthenticated = true } = options;
   const buckets = new Map<string, WindowEntry>();
   let lastCleanupMs = Date.now();
 
   const middleware = ((req: Request, res: Response, next: NextFunction): void => {
-    // Authenticated users are metered by the billing layer instead.
-    if ((req as AuthedRequest).userId) {
+    // Authenticated users are metered by the billing layer instead
+    // (unless this limiter explicitly covers them too).
+    const userId = (req as AuthedRequest).userId as string | undefined;
+    if (userId && exemptAuthenticated) {
       next();
       return;
     }
@@ -59,11 +68,11 @@ export function createAnonRateLimiter(options: AnonRateLimitOptions): RequestHan
       }
     }
 
-    const ip = clientIp(req);
-    const entry = buckets.get(ip);
+    const bucketKey = userId ? `u:${userId}` : clientIp(req);
+    const entry = buckets.get(bucketKey);
 
     if (!entry || now - entry.windowStartMs >= windowMs) {
-      buckets.set(ip, { count: 1, windowStartMs: now });
+      buckets.set(bucketKey, { count: 1, windowStartMs: now });
       next();
       return;
     }

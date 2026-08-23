@@ -155,6 +155,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ParsedQuote"
+        "429":
+          description: >
+            Either the anonymous daily free limit (AnonLimitError with
+            code ANON_DAILY_LIMIT_REACHED) or the hourly anti-abuse rate
+            limit (ApiError with error RATE_LIMITED).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AnonLimitError"
+                  - $ref: "#/components/schemas/ApiError"
 
   /apply-voice-command:
     post:
@@ -174,6 +185,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VoiceCommandResult"
+        "429":
+          description: >
+            Either the anonymous daily free limit (AnonLimitError with
+            code ANON_DAILY_LIMIT_REACHED) or the hourly anti-abuse rate
+            limit (ApiError with error RATE_LIMITED).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AnonLimitError"
+                  - $ref: "#/components/schemas/ApiError"
+
+  /events:
+    post:
+      operationId: trackFunnelEvent
+      tags: [analytics]
+      summary: Record a funnel analytics event (anonymous or signed-in)
+      description: >
+        Fire-and-forget conversion funnel tracking. Events are keyed by an
+        anonymous visitor id generated client-side; the server attaches the
+        user id when the caller is signed in. No personal data is stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FunnelEventInput"
+      responses:
+        "204":
+          description: Event recorded
 
   /profile:
     get:
@@ -961,6 +1002,44 @@ components:
       required:
         - error
 
+    AnonLimitError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [ANON_DAILY_LIMIT_REACHED]
+        message:
+          type: string
+      required:
+        - code
+        - message
+
+    FunnelEventInput:
+      type: object
+      properties:
+        eventType:
+          type: string
+          enum:
+            - landing_view
+            - try_it_click
+            - quote_created
+            - gated_action
+            - signup_completed
+        visitorId:
+          type: string
+          minLength: 8
+          maxLength: 64
+        metadata:
+          type: object
+          additionalProperties: false
+          properties:
+            action:
+              type: string
+              enum: [pdf, email, save_template]
+      required:
+        - eventType
+        - visitorId
+
     QuoteLineItem:
       type: object
       properties:
@@ -1079,6 +1158,13 @@ components:
         description:
           type: string
           description: Natural language description of the business and pricing
+        visitorId:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: >
+            Anonymous visitor id (client-generated). Used to enforce the
+            signed-out daily free limit; ignored for signed-in users.
       required:
         - description
 
@@ -1109,6 +1195,13 @@ components:
             $ref: "#/components/schemas/QuoteLineItem"
         settings:
           $ref: "#/components/schemas/QuoteSettings"
+        visitorId:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: >
+            Anonymous visitor id (client-generated). Used to enforce the
+            signed-out daily free limit; ignored for signed-in users.
       required:
         - command
         - lineItems

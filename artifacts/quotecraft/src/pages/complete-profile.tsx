@@ -4,12 +4,16 @@ import { motion } from "framer-motion";
 import { FileText } from "lucide-react";
 import { BusinessProfileForm } from "@/components/business-profile-form";
 import { peekPendingAction } from "@/lib/auth-actions";
+import { trackEvent } from "@/lib/analytics";
 
 export default function CompleteProfile() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
 
   const handleSaved = () => {
+    // Funnel step 5 — only brand-new accounts pass through this page, so a
+    // saved profile marks a completed sign-up (linked to the visitor id).
+    trackEvent("signup_completed");
     // Resume a pending gated action (home reads it), else go to the dashboard.
     setLocation(peekPendingAction() ? "/quote" : "/dashboard");
   };

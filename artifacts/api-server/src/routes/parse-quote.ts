@@ -9,6 +9,12 @@ import {
 } from "../lib/billing";
 import { upsertCurrentUser } from "../lib/user-sync";
 import { anonAiRateLimiter } from "../lib/anonRateLimit";
+import {
+  anonDailyKey,
+  reserveAnonDaily,
+  releaseAnonDaily,
+  anonLimitResponse,
+} from "../lib/anonDailyLimit";
 
 const router: IRouter = Router();
 
@@ -19,11 +25,22 @@ router.post("/parse-quote", optionalAuth, anonAiRateLimiter, async (req, res): P
     return;
   }
 
-  // Visitors (no session) may generate quotes freely — the sign-up gate is
-  // at download/email/save-template. For logged-in users, generating a quote
-  // is a metered "new quote" action: Pro = unlimited, otherwise 1 credit,
-  // otherwise free-tier allowance.
+  // Signed-out visitors get 3 free AI actions per day (generations + voice
+  // edits combined), then a 429 tells the app to show the create-account
+  // dialog. A slot is reserved ATOMICALLY up front (concurrent requests can't
+  // over-claim) and released below if the AI fails — any 200 response,
+  // including the defaults fallback, is a served result and stays billed.
+  // For logged-in users, generating a quote is a metered "new quote"
+  // action: Pro = unlimited, otherwise 1 credit, otherwise free-tier allowance.
   const userId = (req as AuthedRequest).userId as string | undefined;
+  let anonKey: string | null = null;
+  if (!userId) {
+    anonKey = anonDailyKey(req, parsed.data.visitorId);
+    if (!(await reserveAnonDaily(anonKey))) {
+      res.status(429).json(anonLimitResponse());
+      return;
+    }
+  }
   if (userId) {
     await upsertCurrentUser(userId);
     try {
@@ -77,23 +94,31 @@ Output this exact JSON structure:
   }
 }`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
-    max_completion_tokens: 2048,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: description },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  const content = response.choices[0]?.message?.content ?? "{}";
+  let content: string;
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      max_completion_tokens: 2048,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: description },
+      ],
+      response_format: { type: "json_object" },
+    });
+    content = response.choices[0]?.message?.content ?? "{}";
+  } catch (err) {
+    // AI failure: give the reserved anonymous slot back (free retry), then
+    // let the standard error handler produce the 500.
+    if (anonKey) await releaseAnonDaily(anonKey);
+    throw err;
+  }
 
   let result: unknown;
   try {
     result = JSON.parse(content);
   } catch {
     req.log.error({ content }, "Failed to parse OpenAI JSON response");
+    if (anonKey) await releaseAnonDaily(anonKey);
     res.status(500).json({ error: "Failed to parse AI response" });
     return;
   }

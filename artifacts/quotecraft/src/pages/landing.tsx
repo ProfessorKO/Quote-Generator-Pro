@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -10,6 +11,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 
 const FEATURES = [
   {
@@ -37,7 +39,16 @@ const FEATURES = [
 export default function Landing() {
   const [, setLocation] = useLocation();
 
-  const startAsGuest = () => setLocation("/quote?new=1");
+  // Funnel step 1 — a real browser rendered the landing page (bots that
+  // don't run JS never fire this, unlike raw request counts).
+  useEffect(() => {
+    trackEvent("landing_view");
+  }, []);
+
+  const startAsGuest = () => {
+    trackEvent("try_it_click"); // Funnel step 2
+    setLocation("/quote?new=1");
+  };
 
   const signIn = () => setLocation("/sign-in");
 

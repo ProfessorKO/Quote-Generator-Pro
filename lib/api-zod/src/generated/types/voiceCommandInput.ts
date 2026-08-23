@@ -13,4 +13,11 @@ export interface VoiceCommandInput {
   command: string;
   lineItems: QuoteLineItem[];
   settings: QuoteSettings;
+  /**
+     * Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.
+
+     * @minLength 8
+     * @maxLength 64
+     */
+  visitorId?: string;
 }

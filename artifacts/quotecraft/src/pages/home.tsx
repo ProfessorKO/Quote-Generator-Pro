@@ -43,6 +43,13 @@ import {
   useInvalidateBilling,
   type LimitAction,
 } from "@/lib/billing";
+import { AnonLimitDialog } from "@/components/anon-limit-dialog";
+import {
+  getVisitorId,
+  trackEvent,
+  isAnonDailyLimit,
+  type GatedActionKind,
+} from "@/lib/analytics";
 
 export default function Home() {
   const [location, setLocation] = useLocation();
@@ -107,6 +114,8 @@ export default function Home() {
   const [templateName, setTemplateName] = useState("");
   // CP1/CP2/CP5 — which free-tier limit dialog to show (402 responses).
   const [limitAction, setLimitAction] = useState<LimitAction | null>(null);
+  // Signed-out visitor hit the 3-per-day AI limit (429) — offer sign-up.
+  const [anonLimitOpen, setAnonLimitOpen] = useState(false);
   const invalidateBilling = useInvalidateBilling();
 
   const LISTEN_WINDOW_SECONDS = 30;
@@ -295,6 +304,10 @@ export default function Home() {
       return;
     }
     if (!isEntitled) {
+      // Funnel step 4 — a visitor tried a sign-up-gated action.
+      const kind: GatedActionKind =
+        action === "save" ? "save_template" : action === "download" ? "pdf" : "email";
+      trackEvent("gated_action", { action: kind });
       setPendingAction(action);
       toast("Create a free account to continue");
       setLocation("/sign-in");
@@ -381,7 +394,7 @@ export default function Home() {
     const loadingToast = toast.loading(`Applying: "${command}"`);
     startProcessing();
     applyVoiceCommand.mutate(
-      { data: { command, lineItems, settings } },
+      { data: { command, lineItems, settings, visitorId: getVisitorId() } },
       {
         onSuccess: (data) => {
           toast.dismiss(loadingToast);
@@ -413,6 +426,11 @@ export default function Home() {
         onError: (err) => {
           toast.dismiss(loadingToast);
           stopProcessing();
+          // Signed-out daily AI limit reached — offer a free account.
+          if (isAnonDailyLimit(err)) {
+            setAnonLimitOpen(true);
+            return;
+          }
           // CP2 — free voice-edit limit reached.
           if (limitReachedAction(err)) {
             setLimitAction("voiceEdits");
@@ -564,7 +582,7 @@ export default function Home() {
     // then generation runs), so we lock the screen here regardless of whether the
     // description was typed or spoken — it is the same heavy AI step (Bug #3/#5).
     startProcessing();
-    parseQuote.mutate({ data: { description } }, {
+    parseQuote.mutate({ data: { description, visitorId: getVisitorId() } }, {
       onSuccess: (data) => {
         stopProcessing();
         invalidateBilling();
@@ -574,9 +592,15 @@ export default function Home() {
           setBusinessName(data.businessName);
         }
         setHasParsed(true);
+        trackEvent("quote_created"); // Funnel step 3
       },
       onError: (err) => {
         stopProcessing();
+        // Signed-out daily AI limit reached — offer a free account.
+        if (isAnonDailyLimit(err)) {
+          setAnonLimitOpen(true);
+          return;
+        }
         // CP1 — free new-quote limit reached (logged-in users only).
         if (limitReachedAction(err)) {
           setLimitAction("newQuotes");
@@ -1175,6 +1199,7 @@ export default function Home() {
       />
 
       {/* CP1/CP2/CP5 — free-tier limit reached */}
+      <AnonLimitDialog open={anonLimitOpen} onOpenChange={setAnonLimitOpen} />
       <LimitDialog
         action={limitAction}
         onOpenChange={(o) => !o && setLimitAction(null)}

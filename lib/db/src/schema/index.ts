@@ -8,3 +8,4 @@ export * from "./email-records";
 export * from "./email-templates";
 export * from "./billing";
 export * from "./coupons";
+export * from "./analytics";

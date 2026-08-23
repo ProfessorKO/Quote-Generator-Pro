@@ -187,8 +187,14 @@ export const DeleteTemplateParams = zod.object({
 /**
  * @summary Parse a natural language business description into quote fields
  */
+export const parseQuoteDescriptionBodyVisitorIdMin = 8;
+export const parseQuoteDescriptionBodyVisitorIdMax = 64;
+
+
+
 export const ParseQuoteDescriptionBody = zod.object({
-  "description": zod.string().describe('Natural language description of the business and pricing')
+  "description": zod.string().describe('Natural language description of the business and pricing'),
+  "visitorId": zod.string().min(parseQuoteDescriptionBodyVisitorIdMin).max(parseQuoteDescriptionBodyVisitorIdMax).optional().describe('Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.\n')
 })
 
 export const ParseQuoteDescriptionResponse = zod.object({
@@ -219,6 +225,11 @@ export const ParseQuoteDescriptionResponse = zod.object({
 /**
  * @summary Apply a spoken command to an existing quote structure
  */
+export const applyVoiceCommandBodyVisitorIdMin = 8;
+export const applyVoiceCommandBodyVisitorIdMax = 64;
+
+
+
 export const ApplyVoiceCommandBody = zod.object({
   "command": zod.string().describe('The spoken command transcript to apply to the quote'),
   "lineItems": zod.array(zod.object({
@@ -240,7 +251,8 @@ export const ApplyVoiceCommandBody = zod.object({
   "isPublicHoliday": zod.boolean(),
   "hasCallOut": zod.boolean(),
   "surchargeLabel": zod.string().optional().describe('Editable label for the % surcharge toggle (default: Public Holiday)')
-})
+}),
+  "visitorId": zod.string().min(applyVoiceCommandBodyVisitorIdMin).max(applyVoiceCommandBodyVisitorIdMax).optional().describe('Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.\n')
 })
 
 export const ApplyVoiceCommandResponse = zod.object({
@@ -266,6 +278,25 @@ export const ApplyVoiceCommandResponse = zod.object({
 }),
   "message": zod.string().describe('Short human-readable summary of what changed'),
   "understood": zod.boolean().describe('Whether the command was understood and applied')
+})
+
+
+/**
+ * Fire-and-forget conversion funnel tracking. Events are keyed by an anonymous visitor id generated client-side; the server attaches the user id when the caller is signed in. No personal data is stored.
+
+ * @summary Record a funnel analytics event (anonymous or signed-in)
+ */
+export const trackFunnelEventBodyVisitorIdMin = 8;
+export const trackFunnelEventBodyVisitorIdMax = 64;
+
+
+
+export const TrackFunnelEventBody = zod.object({
+  "eventType": zod.enum(['landing_view', 'try_it_click', 'quote_created', 'gated_action', 'signup_completed']),
+  "visitorId": zod.string().min(trackFunnelEventBodyVisitorIdMin).max(trackFunnelEventBodyVisitorIdMax),
+  "metadata": zod.object({
+  "action": zod.enum(['pdf', 'email', 'save_template']).optional()
+}).optional()
 })
 
 

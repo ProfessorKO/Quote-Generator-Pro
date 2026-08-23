@@ -23,6 +23,7 @@ import type {
   AdminCoupon,
   AdminCouponInput,
   AdminUser,
+  AnonLimitError,
   ApiError,
   BillingCancelInput,
   BillingCheckoutInput,
@@ -39,6 +40,7 @@ import type {
   EmailRecord,
   EmailTemplate,
   EmailTemplateInput,
+  FunnelEventInput,
   HealthStatus,
   LimitReachedError,
   ListEmailRecordsParams,
@@ -547,7 +549,7 @@ export const parseQuoteDescription = async (parseQuoteInput: ParseQuoteInput, op
 
 
 
-export const getParseQuoteDescriptionMutationOptions = <TError = ErrorType<unknown>,
+export const getParseQuoteDescriptionMutationOptions = <TError = ErrorType<AnonLimitError | ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof parseQuoteDescription>>, TError,{data: BodyType<ParseQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof parseQuoteDescription>>, TError,{data: BodyType<ParseQuoteInput>}, TContext> => {
 
@@ -576,12 +578,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ParseQuoteDescriptionMutationResult = NonNullable<Awaited<ReturnType<typeof parseQuoteDescription>>>
     export type ParseQuoteDescriptionMutationBody = BodyType<ParseQuoteInput>
-    export type ParseQuoteDescriptionMutationError = ErrorType<unknown>
+    export type ParseQuoteDescriptionMutationError = ErrorType<AnonLimitError | ApiError>
 
     /**
  * @summary Parse a natural language business description into quote fields
  */
-export const useParseQuoteDescription = <TError = ErrorType<unknown>,
+export const useParseQuoteDescription = <TError = ErrorType<AnonLimitError | ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof parseQuoteDescription>>, TError,{data: BodyType<ParseQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof parseQuoteDescription>>,
@@ -618,7 +620,7 @@ export const applyVoiceCommand = async (voiceCommandInput: VoiceCommandInput, op
 
 
 
-export const getApplyVoiceCommandMutationOptions = <TError = ErrorType<unknown>,
+export const getApplyVoiceCommandMutationOptions = <TError = ErrorType<AnonLimitError | ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext> => {
 
@@ -647,12 +649,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ApplyVoiceCommandMutationResult = NonNullable<Awaited<ReturnType<typeof applyVoiceCommand>>>
     export type ApplyVoiceCommandMutationBody = BodyType<VoiceCommandInput>
-    export type ApplyVoiceCommandMutationError = ErrorType<unknown>
+    export type ApplyVoiceCommandMutationError = ErrorType<AnonLimitError | ApiError>
 
     /**
  * @summary Apply a spoken command to an existing quote structure
  */
-export const useApplyVoiceCommand = <TError = ErrorType<unknown>,
+export const useApplyVoiceCommand = <TError = ErrorType<AnonLimitError | ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyVoiceCommand>>, TError,{data: BodyType<VoiceCommandInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof applyVoiceCommand>>,
@@ -661,6 +663,79 @@ export const useApplyVoiceCommand = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getApplyVoiceCommandMutationOptions(options));
+    }
+
+export const getTrackFunnelEventUrl = () => {
+
+
+
+
+  return `/api/events`
+}
+
+/**
+ * Fire-and-forget conversion funnel tracking. Events are keyed by an anonymous visitor id generated client-side; the server attaches the user id when the caller is signed in. No personal data is stored.
+
+ * @summary Record a funnel analytics event (anonymous or signed-in)
+ */
+export const trackFunnelEvent = async (funnelEventInput: FunnelEventInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getTrackFunnelEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      funnelEventInput,)
+  }
+);}
+
+
+
+
+export const getTrackFunnelEventMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof trackFunnelEvent>>, TError,{data: BodyType<FunnelEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof trackFunnelEvent>>, TError,{data: BodyType<FunnelEventInput>}, TContext> => {
+
+const mutationKey = ['trackFunnelEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof trackFunnelEvent>>, {data: BodyType<FunnelEventInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  trackFunnelEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TrackFunnelEventMutationResult = NonNullable<Awaited<ReturnType<typeof trackFunnelEvent>>>
+    export type TrackFunnelEventMutationBody = BodyType<FunnelEventInput>
+    export type TrackFunnelEventMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record a funnel analytics event (anonymous or signed-in)
+ */
+export const useTrackFunnelEvent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof trackFunnelEvent>>, TError,{data: BodyType<FunnelEventInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof trackFunnelEvent>>,
+        TError,
+        {data: BodyType<FunnelEventInput>},
+        TContext
+      > => {
+      return useMutation(getTrackFunnelEventMutationOptions(options));
     }
 
 export const getGetBusinessProfileUrl = () => {

@@ -187,6 +187,52 @@ export interface ApiError {
   error: string;
 }
 
+export type AnonLimitErrorCode = typeof AnonLimitErrorCode[keyof typeof AnonLimitErrorCode];
+
+
+export const AnonLimitErrorCode = {
+  ANON_DAILY_LIMIT_REACHED: 'ANON_DAILY_LIMIT_REACHED',
+} as const;
+
+export interface AnonLimitError {
+  code: AnonLimitErrorCode;
+  message: string;
+}
+
+export type FunnelEventInputEventType = typeof FunnelEventInputEventType[keyof typeof FunnelEventInputEventType];
+
+
+export const FunnelEventInputEventType = {
+  landing_view: 'landing_view',
+  try_it_click: 'try_it_click',
+  quote_created: 'quote_created',
+  gated_action: 'gated_action',
+  signup_completed: 'signup_completed',
+} as const;
+
+export type FunnelEventInputMetadataAction = typeof FunnelEventInputMetadataAction[keyof typeof FunnelEventInputMetadataAction];
+
+
+export const FunnelEventInputMetadataAction = {
+  pdf: 'pdf',
+  email: 'email',
+  save_template: 'save_template',
+} as const;
+
+export type FunnelEventInputMetadata = {
+  action?: FunnelEventInputMetadataAction;
+};
+
+export interface FunnelEventInput {
+  eventType: FunnelEventInputEventType;
+  /**
+     * @minLength 8
+     * @maxLength 64
+     */
+  visitorId: string;
+  metadata?: FunnelEventInputMetadata;
+}
+
 export interface QuoteLineItem {
   id: string;
   label: string;
@@ -234,6 +280,13 @@ export interface QuoteTemplateInput {
 export interface ParseQuoteInput {
   /** Natural language description of the business and pricing */
   description: string;
+  /**
+     * Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.
+
+     * @minLength 8
+     * @maxLength 64
+     */
+  visitorId?: string;
 }
 
 export interface ParsedQuote {
@@ -248,6 +301,13 @@ export interface VoiceCommandInput {
   command: string;
   lineItems: QuoteLineItem[];
   settings: QuoteSettings;
+  /**
+     * Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.
+
+     * @minLength 8
+     * @maxLength 64
+     */
+  visitorId?: string;
 }
 
 export interface VoiceCommandResult {

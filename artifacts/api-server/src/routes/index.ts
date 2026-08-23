@@ -11,6 +11,7 @@ import sendQuoteEmailRouter from "./send-quote-email";
 import adminRouter from "./admin";
 import billingRouter from "./billing";
 import contactRouter from "./contact";
+import eventsRouter from "./events";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(sendQuoteEmailRouter);
 router.use(adminRouter);
 router.use(billingRouter);
 router.use(contactRouter);
+router.use(eventsRouter);
 
 export default router;

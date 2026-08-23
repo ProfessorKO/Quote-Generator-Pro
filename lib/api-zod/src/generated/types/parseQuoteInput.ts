@@ -9,4 +9,11 @@
 export interface ParseQuoteInput {
   /** Natural language description of the business and pricing */
   description: string;
+  /**
+     * Anonymous visitor id (client-generated). Used to enforce the signed-out daily free limit; ignored for signed-in users.
+
+     * @minLength 8
+     * @maxLength 64
+     */
+  visitorId?: string;
 }
