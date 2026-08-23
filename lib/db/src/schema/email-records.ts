@@ -12,7 +12,7 @@ export const emailRecordsTable = pgTable(
     subject: text("subject").notNull(),
     body: text("body").notNull(),
     status: text("status").notNull().default("sent"),
-    sentAt: timestamp("sent_at").defaultNow().notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("email_records_user_id_idx").on(table.userId)],
 );

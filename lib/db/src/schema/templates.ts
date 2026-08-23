@@ -14,8 +14,8 @@ export const templatesTable = pgTable(
     businessDescription: text("business_description").notNull(),
     lineItems: jsonb("line_items").notNull().$type<LineItem[]>(),
     settings: jsonb("settings").notNull().$type<QuoteSettings>(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     // Enforce per-user unique, case-insensitive template names at the DB

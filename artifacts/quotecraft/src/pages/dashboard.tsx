@@ -24,7 +24,7 @@ import {
   Coins,
 } from "lucide-react";
 import { useBilling } from "@/lib/billing";
-import { format } from "date-fns";
+import { formatDateAU, formatDateShortAU } from "@/lib/format";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -326,7 +326,7 @@ export default function Dashboard() {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {q.clientName ? `${q.clientName} · ` : ""}
-                            {format(new Date(q.createdAt), "d MMM yyyy")}
+                            {formatDateAU(q.createdAt)}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
@@ -379,7 +379,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(rec.sentAt), "d MMM")}
+                          {formatDateShortAU(rec.sentAt)}
                         </p>
                         <Badge
                           variant={
@@ -418,7 +418,7 @@ export default function Dashboard() {
                         <p className="font-semibold text-sm truncate">{t.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {t.lineItems?.length || 0} items ·{" "}
-                          {format(new Date(t.createdAt), "d MMM yyyy")}
+                          {formatDateAU(t.createdAt)}
                         </p>
                       </div>
                       <Button

@@ -15,8 +15,8 @@ export const quotesTable = pgTable(
     settings: jsonb("settings").notNull().$type<QuoteSettings>(),
     total: doublePrecision("total").notNull(),
     source: text("source").notNull().default("save"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    sentAt: timestamp("sent_at"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
   },
   (table) => [index("quotes_user_id_idx").on(table.userId)],
 );

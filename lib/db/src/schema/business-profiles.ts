@@ -14,8 +14,8 @@ export const businessProfilesTable = pgTable(
     abn: text("abn").notNull(),
     acn: text("acn"),
     address: text("address").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("business_profiles_user_id_idx").on(table.userId)],
 );

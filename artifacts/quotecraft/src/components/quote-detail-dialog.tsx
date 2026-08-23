@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatDateAU, formatDateTimeAU } from "@/lib/format";
 import type { QuoteRecord, EmailRecord } from "@workspace/api-client-react";
 import { computeTotals, effectiveRate, normalizeSettings } from "@/lib/quote-record";
 import { formatCurrency } from "@/lib/format";
@@ -50,9 +50,9 @@ export function QuoteDetailDialog({
 
         <div className="space-y-4 py-1">
           <p className="text-xs text-muted-foreground">
-            Created {format(new Date(quote.createdAt), "d MMM yyyy, h:mma")}
+            Created {formatDateTimeAU(quote.createdAt)}
             {quote.sentAt &&
-              ` · Sent ${format(new Date(quote.sentAt), "d MMM yyyy")}`}
+              ` · Sent ${formatDateAU(quote.sentAt)}`}
           </p>
 
           {(quote.clientName || quote.clientEmail || quote.clientSuburb) && (
@@ -143,7 +143,7 @@ export function EmailDetailDialog({
 
         <div className="space-y-4 py-1">
           <p className="text-xs text-muted-foreground">
-            Sent {format(new Date(record.sentAt), "d MMM yyyy, h:mma")}
+            Sent {formatDateTimeAU(record.sentAt)}
           </p>
 
           <div className="rounded-lg bg-muted/40 p-3 space-y-1">

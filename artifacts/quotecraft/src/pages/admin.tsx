@@ -22,21 +22,12 @@ import {
   getListAdminUsersQueryKey,
 } from "@workspace/api-client-react";
 
-const AEST_FORMAT = new Intl.DateTimeFormat("en-AU", {
-  timeZone: "Australia/Sydney",
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: true,
-});
+import { formatDateTimeAU } from "@/lib/format";
 
+// Kept as a local alias — all display formatting now goes through the shared
+// Australian-time helpers in @/lib/format.
 function formatAest(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return AEST_FORMAT.format(date);
+  return formatDateTimeAU(value);
 }
 
 function signupLabel(method: string | null): string {

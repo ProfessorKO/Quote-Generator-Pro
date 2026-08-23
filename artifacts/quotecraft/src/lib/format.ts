@@ -117,3 +117,61 @@ export function formatCurrency(amount: number): string {
     currency: "AUD",
   }).format(amount);
 }
+
+/**
+ * All dates/times in the app are displayed in Australian Eastern Time
+ * (Australia/Sydney — the same zone the billing day/month boundaries use),
+ * regardless of the viewer's device timezone. Always use these helpers
+ * instead of date-fns format / toLocaleDateString, which silently render in
+ * the device's local zone.
+ */
+const AU_TIMEZONE = "Australia/Sydney";
+
+const AU_DATE = new Intl.DateTimeFormat("en-AU", {
+  timeZone: AU_TIMEZONE,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+const AU_DATE_SHORT = new Intl.DateTimeFormat("en-AU", {
+  timeZone: AU_TIMEZONE,
+  day: "numeric",
+  month: "short",
+});
+
+const AU_DATETIME = new Intl.DateTimeFormat("en-AU", {
+  timeZone: AU_TIMEZONE,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+type DateInput = string | number | Date | null | undefined;
+
+function toValidDate(value: DateInput): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** e.g. "23 Aug 2026" (Australian Eastern Time). */
+export function formatDateAU(value: DateInput): string {
+  const d = toValidDate(value);
+  return d ? AU_DATE.format(d) : "—";
+}
+
+/** e.g. "23 Aug" (Australian Eastern Time). */
+export function formatDateShortAU(value: DateInput): string {
+  const d = toValidDate(value);
+  return d ? AU_DATE_SHORT.format(d) : "—";
+}
+
+/** e.g. "23 Aug 2026, 9:15 pm" (Australian Eastern Time). */
+export function formatDateTimeAU(value: DateInput): string {
+  const d = toValidDate(value);
+  return d ? AU_DATETIME.format(d) : "—";
+}

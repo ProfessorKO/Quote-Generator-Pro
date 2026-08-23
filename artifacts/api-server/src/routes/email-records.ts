@@ -22,7 +22,9 @@ router.get("/email-records", requireAuth, async (req, res): Promise<void> => {
   }
   if (typeof sentMonth === "string" && /^\d{4}-\d{2}$/.test(sentMonth)) {
     conditions.push(
-      sql`to_char(${emailRecordsTable.sentAt}, 'YYYY-MM') = ${sentMonth}`,
+      // Month boundary in Sydney time, stated explicitly rather than relying
+      // on the database's default timezone (which differs per environment).
+      sql`to_char(${emailRecordsTable.sentAt} AT TIME ZONE 'Australia/Sydney', 'YYYY-MM') = ${sentMonth}`,
     );
   }
 

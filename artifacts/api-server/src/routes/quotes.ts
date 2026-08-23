@@ -9,6 +9,7 @@ import {
   GetNextQuoteSequenceResponse,
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { sydneyToday } from "../lib/anonDailyLimit";
 
 const router: IRouter = Router();
 
@@ -28,7 +29,9 @@ router.get("/quotes", requireAuth, async (req, res): Promise<void> => {
   }
   if (typeof sentMonth === "string" && /^\d{4}-\d{2}$/.test(sentMonth)) {
     conditions.push(
-      sql`to_char(${quotesTable.sentAt}, 'YYYY-MM') = ${sentMonth}`,
+      // Month boundary in Sydney time, stated explicitly rather than relying
+      // on the database's default timezone (which differs per environment).
+      sql`to_char(${quotesTable.sentAt} AT TIME ZONE 'Australia/Sydney', 'YYYY-MM') = ${sentMonth}`,
     );
   }
 
@@ -48,7 +51,10 @@ router.get(
   requireAuth,
   async (req, res): Promise<void> => {
     const userId = (req as AuthedRequest).userId;
-    const year = new Date().getFullYear();
+    // Quote numbering follows the Sydney calendar year on BOTH sides of this
+    // comparison — server clock (host runs in UTC) and SQL alike — so the
+    // sequence can't disagree with itself around New Year.
+    const year = Number(sydneyToday().slice(0, 4));
 
     const [row] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -56,7 +62,7 @@ router.get(
       .where(
         and(
           eq(quotesTable.userId, userId),
-          sql`extract(year from ${quotesTable.createdAt}) = ${year}`,
+          sql`extract(year from ${quotesTable.createdAt} AT TIME ZONE 'Australia/Sydney') = ${year}`,
         ),
       );
 

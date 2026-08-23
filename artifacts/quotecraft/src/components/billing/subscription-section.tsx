@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Loader2, Crown, Coins } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateAU } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -167,10 +167,10 @@ export function SubscriptionSection() {
   // Coupon-granted free trial: Pro access without a Stripe subscription.
   const isTrial = billing.planSource === "trial";
   const trialEnd = billing.trialEndsAt
-    ? format(new Date(billing.trialEndsAt), "d MMM yyyy")
+    ? formatDateAU(billing.trialEndsAt)
     : null;
   const periodEnd = billing.currentPeriodEnd
-    ? format(new Date(billing.currentPeriodEnd), "d MMM yyyy")
+    ? formatDateAU(billing.currentPeriodEnd)
     : null;
   const u = billing.usage;
   const l = billing.limits;

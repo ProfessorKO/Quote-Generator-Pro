@@ -9,7 +9,7 @@ import { useBilling } from "@/lib/billing";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateAU } from "@/lib/format";
 import { useAuth } from "@clerk/react";
 
 const TEMPLATES_CACHE_KEY = "quotecraft.templates.cache";
@@ -137,7 +137,7 @@ export default function Templates() {
                       <span className="bg-accent/10 text-accent-foreground px-2 py-0.5 rounded-full">
                         {template.lineItems?.length || 0} items
                       </span>
-                      <span>{format(new Date(template.createdAt), "MMM d, yyyy")}</span>
+                      <span>{formatDateAU(template.createdAt)}</span>
                     </div>
                   </div>
                   

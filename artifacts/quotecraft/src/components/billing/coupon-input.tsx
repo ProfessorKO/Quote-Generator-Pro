@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, Ticket } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatDateAU } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRedeemCoupon } from "@workspace/api-client-react";
@@ -36,7 +36,7 @@ export function CouponInput({
           invalidateBilling();
           setCode("");
           const until = res.trialEndsAt
-            ? format(new Date(res.trialEndsAt), "d MMM yyyy")
+            ? formatDateAU(res.trialEndsAt)
             : null;
           toast.success(
             `Coupon applied! You're on Pro for ${res.trialDays} days${until ? ` — until ${until}` : ""}.`,
