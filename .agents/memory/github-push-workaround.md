@@ -9,3 +9,4 @@ description: How to push this repo to GitHub from the main agent despite blocked
 - Use a host-scoped header: `[http "https://github.com/"] extraHeader = Authorization: Basic base64(x-access-token:TOKEN)` in a temp `GIT_CONFIG_GLOBAL` file. An UNSCOPED extraHeader leaks to S3 and breaks Git LFS uploads ("Not Implemented").
 - Large first pushes (~266 MB) exceed the 2-min command limit and detached/background pushes get killed — push in chunks (`<sha>:refs/heads/branch` walking forward ~5 commits at a time).
 - Never print or persist the token; write to /tmp with mode 600 and delete after.
+- For an explicitly approved removal of the tip commit already on GitHub, verify the remote ref SHA first, then update the exact git/refs/heads/main ref with a forced PATCH through the GitHub connector; never force-update if the remote SHA changed unexpectedly.
